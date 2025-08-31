@@ -31,7 +31,7 @@ const taxReturnStatuses = [
 
 export default function Sidebar({ collapsed, onToggle }) {
   const location = useLocation();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const { can } = usePermissions();
   const [taxReturnsExpanded, setTaxReturnsExpanded] = useState(false);
 
@@ -135,6 +135,8 @@ const handleStatusClick = (status) => {
         <div>
           <h1 className="text-lg font-bold text-gray-900">TaxPortal</h1>
           {/* <p className="text-xs text-gray-500">Demo</p> */}
+           {/* <div className="font-medium text-gray-900">{user?.name}</div>
+            <div className="text-xs text-gray-500 capitalize">{user?.role}</div> */}
         </div>
       </div>
     )}
@@ -259,8 +261,11 @@ const handleStatusClick = (status) => {
                     <User className="w-4 h-4 text-white" />
                   </div>
                   <div className="text-left">
-                    <div className="text-sm font-medium text-gray-900">My Account</div>
-                    <div className="text-xs text-gray-500">Manage settings</div>
+                    {/* <div className="text-sm font-medium text-gray-900">My Account</div>
+                    <div className="text-xs text-gray-500">Manage settings</div> */}
+
+                     <div className="font-medium text-gray-900">{user?.name}</div>
+            <div className="text-xs text-gray-500 capitalize">{user?.role}</div>
                   </div>
                 </div>
                 <ChevronDown className={`w-4 h-4 transition-transform ${showUserMenu ? 'rotate-180' : ''}`} />
