@@ -236,9 +236,9 @@ export default function Payments() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Date
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
-                </th>
+                </th> */}
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -266,7 +266,7 @@ export default function Payments() {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {formatDate(payment.createdAt)}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {/* <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {can('action:payment.refund') && payment.status === 'Completed' && (
                       <button
                         onClick={() => handleRefund(payment.id, payment)}
@@ -276,7 +276,7 @@ export default function Payments() {
                         <RotateCcw className={`w-4 h-4 ${processingRefund[payment.id] ? 'animate-spin' : ''}`} />
                       </button>
                     )}
-                  </td>
+                  </td> */}
                 </tr>
               ))}
             </tbody>

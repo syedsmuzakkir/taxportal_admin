@@ -230,7 +230,7 @@ export default function UsersManagement() {
                       >
                         <Shield className="w-4 h-4" />
                       </button>
-                      <button 
+                      {/* <button 
                         className="text-gray-600 hover:text-gray-700 transition-colors"
                         title="Edit User"
                       >
@@ -242,7 +242,7 @@ export default function UsersManagement() {
                         title="Delete User"
                       >
                         <Trash2 className="w-4 h-4" />
-                      </button>
+                      </button> */}
                     </div>
                   </td>
                 </tr>

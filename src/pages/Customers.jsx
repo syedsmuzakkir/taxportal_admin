@@ -273,14 +273,14 @@ export default function Customers() {
                       >
                         <Eye className="w-4 h-4" />
                       </Link>
-                      {can('action:customer.edit') && (
+                      {/* {can('action:customer.edit') && (
                         <button 
                           className="text-gray-600 hover:text-gray-700 transition-colors"
                           title="Edit Customer"
                         >
                           <Edit className="w-4 h-4" />
                         </button>
-                      )}
+                      )} */}
                       {can('action:customer.delete') && (
                         <button 
                           onClick={() => handleDeleteCustomer(customer.id, customer.name)}
