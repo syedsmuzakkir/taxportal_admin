@@ -26,7 +26,7 @@ export default function Invoices() {
     returnName: "",
     returnType: "",
     documentsCount: 0,
-    items: [{ description: "", quantity: 1, rate: 0, amount: 0 }],
+    items: [{ description: "", Hours: 1, rate: 0, amount: 0 }],
     discount: 0,
     taxRate: 0,
     status: "Pending",
@@ -55,7 +55,7 @@ export default function Invoices() {
   const addLineItem = () => {
     setNewInvoice((prev) => ({
       ...prev,
-      items: [...prev.items, { description: "", quantity: 1, rate: 0, amount: 0 }],
+      items: [...prev.items, { description: "", Hours: 1, rate: 0, amount: 0 }],
     }))
   }
 
@@ -69,8 +69,8 @@ export default function Invoices() {
   const updateLineItem = (index, field, value) => {
     const items = [...newInvoice.items]
     items[index] = { ...items[index], [field]: value }
-    if (field === "quantity" || field === "rate") {
-      items[index].amount = (Number(items[index].quantity) || 0) * (Number(items[index].rate) || 0)
+    if (field === "Hours" || field === "rate") {
+      items[index].amount = (Number(items[index].Hours) || 0) * (Number(items[index].rate) || 0)
     }
     setNewInvoice({ ...newInvoice, items })
   }
@@ -118,7 +118,7 @@ export default function Invoices() {
           </div>
           <table class="items-table">
             <thead>
-              <tr><th>Description</th><th>Quantity</th><th>Rate</th><th>Amount</th></tr>
+              <tr><th>Description</th><th>Hours</th><th>Rate</th><th>Amount</th></tr>
             </thead>
             <tbody>
               ${(invoice.items || [])
@@ -126,7 +126,7 @@ export default function Invoices() {
                   (item) => `
                 <tr>
                   <td>${item.description}</td>
-                  <td>${item.quantity}</td>
+                  <td>${item.Hours}</td>
                   <td>$${Number(item.rate || 0).toFixed(2)}</td>
                   <td>$${Number(item.amount || 0).toFixed(2)}</td>
                 </tr>`,
@@ -161,7 +161,7 @@ export default function Invoices() {
   // Add quick "Price Adjustment" helpers
   const addLumpSumAdjustment = () => {
     setNewInvoice((prev) => {
-      const items = [...prev.items, { description: "Lump sum adjustment", quantity: 1, rate: 0, amount: 0 }]
+      const items = [...prev.items, { description: "Lump sum adjustment", Hours: 1, rate: 0, amount: 0 }]
       return { ...prev, items }
     })
   }
@@ -169,7 +169,7 @@ export default function Invoices() {
     setNewInvoice((prev) => {
       const items = [
         ...prev.items,
-        { description: "Hourly adjustment", quantity: 1, rate: 0, amount: 0 }, // quantity = hours
+        { description: "Hourly adjustment", Hours: 1, rate: 0, amount: 0 }, // Hours = hours
       ]
       return { ...prev, items }
     })
@@ -213,7 +213,7 @@ export default function Invoices() {
         returnName: "",
         returnType: "",
         documentsCount: 0,
-        items: [{ description: "", quantity: 1, rate: 0, amount: 0 }],
+        items: [{ description: "", Hours: 1, rate: 0, amount: 0 }],
         discount: 0,
         taxRate: 0,
         status: "Pending",
@@ -252,7 +252,7 @@ export default function Invoices() {
       items: [
         {
           description: `${ret.name || "Return"}${ret.type ? ` (${ret.type})` : ""}`,
-          quantity: 1,
+          Hours: 1,
           rate: 0,
           amount: 0,
         },
@@ -556,58 +556,95 @@ export default function Invoices() {
             </div>
 
             <div className="space-y-3">
-              {newInvoice.items.map((item, index) => (
-                <div key={index} className="grid grid-cols-12 gap-3 items-end">
-                  <div className="col-span-5">
-                    <input
-                      type="text"
-                      placeholder="Description"
-                      value={item.description}
-                      onChange={(e) => updateLineItem(index, "description", e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
-                  <div className="col-span-2">
-                    <input
-                      type="number"
-                      placeholder="Qty (hours if hourly)"
-                      value={item.quantity}
-                      onChange={(e) => updateLineItem(index, "quantity", Number(e.target.value))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
-                  <div className="col-span-2">
-                    <input
-                      type="number"
-                      placeholder="Rate"
-                      value={item.rate}
-                      onChange={(e) => updateLineItem(index, "rate", Number(e.target.value))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
-                  <div className="col-span-2">
-                    <input
-                      type="number"
-                      readOnly
-                      value={Number(item.amount || 0).toFixed(2)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50"
-                    />
-                  </div>
-                  <div className="col-span-1">
-                    {newInvoice.items.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => removeLineItem(index)}
-                        className="text-red-600 hover:text-red-700 transition-colors"
-                        aria-label="Remove line item"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
+  {newInvoice.items.map((item, index) => (
+    <div key={index} className="grid grid-cols-12 gap-3 items-end">
+      {/* Description */}
+      <div className="col-span-5">
+        <label
+          htmlFor={`description-${index}`}
+          className="block text-sm font-medium text-gray-700 mb-1"
+        >
+          Description
+        </label>
+        <input
+          id={`description-${index}`}
+          type="text"
+          placeholder="e.g. Web design services"
+          value={item.description}
+          onChange={(e) => updateLineItem(index, "description", e.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        />
+      </div>
+
+      {/* Hours */}
+      <div className="col-span-2">
+        <label
+          htmlFor={`Hours-${index}`}
+          className="block text-sm font-medium text-gray-700 mb-1"
+        >
+          Hours
+        </label>
+        <input
+          id={`Hours-${index}`}
+          type="number"
+          placeholder="Hours / Units"
+          value={item.Hours}
+          onChange={(e) => updateLineItem(index, "Hours", Number(e.target.value))}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        />
+      </div>
+
+      {/* Rate */}
+      <div className="col-span-2">
+        <label
+          htmlFor={`rate-${index}`}
+          className="block text-sm font-medium text-gray-700 mb-1"
+        >
+          Rate
+        </label>
+        <input
+          id={`rate-${index}`}
+          type="number"
+          placeholder="Per unit / hour"
+          value={item.rate}
+          onChange={(e) => updateLineItem(index, "rate", Number(e.target.value))}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        />
+      </div>
+
+      {/* Amount */}
+      <div className="col-span-2">
+        <label
+          htmlFor={`amount-${index}`}
+          className="block text-sm font-medium text-gray-700 mb-1"
+        >
+          Amount
+        </label>
+        <input
+          id={`amount-${index}`}
+          type="number"
+          readOnly
+          value={Number(item.amount || 0).toFixed(2)}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50"
+        />
+      </div>
+
+      {/* Remove button */}
+      <div className="col-span-1 flex items-end">
+        {newInvoice.items.length > 1 && (
+          <button
+            type="button"
+            onClick={() => removeLineItem(index)}
+            className="text-red-600 hover:text-red-700 transition-colors"
+            aria-label="Remove line item"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
+      </div>
+    </div>
+  ))}
+</div>
 
             <button
               type="button"
