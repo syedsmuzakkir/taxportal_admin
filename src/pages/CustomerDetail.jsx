@@ -1,368 +1,483 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
-import { useData } from '../contexts/DataContext.jsx';
-import { useAuth } from '../contexts/AuthContext.jsx';
-import { usePermissions } from '../contexts/PermissionsContext.jsx';
-import { useNotifications } from '../contexts/NotificationsContext.jsx';
-import { customersAPI } from '../api/customers.js';
-import { 
-  ArrowLeft, 
-  Mail, 
-  Phone, 
-  FileText, 
-  DollarSign, 
-  MessageSquare,
-  Plus,
+import { useState, useRef } from "react";
+import {
+  ArrowLeft,
+  ChevronRight,
+  ChevronDown,
+  FileText,
+  FileSpreadsheet,
+  FileArchive,
+  FileImage,
   Download,
   Eye,
+  Calendar,
+  DollarSign,
   Clock,
-  Calendar
-} from 'lucide-react';
-import { formatDate, formatDateTime } from '../utils/dateUtils.js';
+  MessageSquare,
+  Paperclip,
+  X,
+} from "lucide-react";
+
+function formatDate(iso) {
+  return new Date(iso).toLocaleDateString();
+}
+
+function formatDateTime(iso) {
+  return new Date(iso).toLocaleString();
+}
+
+function StatusPill({ status }) {
+  const base = "inline-flex items-center rounded-full px-2 py-1 text-xs font-medium";
+  const tone =
+    status === "Filed"
+      ? "bg-green-100 text-green-800"
+      : status === "In Progress"
+      ? "bg-amber-100 text-amber-800"
+      : "bg-blue-100 text-blue-800";
+  return <span className={`${base} ${tone}`}>{status}</span>;
+}
+
+function DocIcon({ type, className }) {
+  const c = `h-5 w-5 ${className || ""}`;
+  if (type === "pdf") return <FileText className={c} />;
+  if (type === "csv") return <FileSpreadsheet className={c} />;
+  if (type === "zip") return <FileArchive className={c} />;
+  if (type === "image") return <FileImage className={c} />;
+  return <FileText className={c} />;
+}
 
 export default function CustomerDetail() {
-  const { id } = useParams();
-  const navigate = useNavigate();
-  const { user } = useAuth();
-  const { can } = usePermissions();
-  const { addNotification } = useNotifications();
-  const { taxReturns, documents, comments, addComment, addActivity } = useData();
-  const [customer, setCustomer] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [pricingMode, setPricingMode] = useState('hourly');
-  const [hourlyRate, setHourlyRate] = useState(150);
-  const [lumpSum, setLumpSum] = useState(500);
-  const [newComment, setNewComment] = useState('');
-  const [isAddingComment, setIsAddingComment] = useState(false);
-
-  useEffect(() => {
-    loadCustomer();
-  }, [id]);
-
-  const loadCustomer = async () => {
-    try {
-      setIsLoading(true);
-      const customerData = await customersAPI.getById(id);
-      
-      // Check if user has permission to view this customer
-      if (user?.role === 'client' && customerData.ownerId !== user.id) {
-        navigate('/not-authorized');
-        return;
-      }
-      
-      setCustomer(customerData);
-    } catch (error) {
-      console.error('Error loading customer:', error);
-      navigate('/customers');
-    } finally {
-      setIsLoading(false);
-    }
+  const customer = {
+    id: "cust_001",
+    name: "Test Customer",
+    email: "test@example.com",
+    mobile: "(555) 101-2020",
+    createdAt: "2025-07-12T10:05:00Z",
+    updatedAt: "2025-08-20T16:40:00Z",
   };
 
-  const handleAddComment = async (e) => {
-    e.preventDefault();
+  const returns = [
+    {
+      id: "ret_1040",
+      name: "tax 1 1040",
+      type: "Individual",
+      status: "In Progress",
+      updatedAt: "2025-08-18T12:00:00Z",
+      details: "Gathered W‑2 and 1099 forms. Pending review of Schedule C expenses and charity deductions.",
+    },
+    {
+      id: "ret_1080",
+      name: "tax 1080",
+      type: "Business",
+      status: "Filed",
+      updatedAt: "2025-07-28T09:15:00Z",
+      details: "Filed with confirmation number #A1B2C3. Awaiting IRS acknowledgement.",
+    },
+  ];
+
+  const initialDocs = [
+    { id: "doc1", name: "W2_2024.pdf", type: "pdf", uploadedAt: "2025-08-01T14:00:00Z" },
+    { id: "doc2", name: "1099.csv", type: "csv", uploadedAt: "2025-08-03T09:30:00Z" },
+    { id: "doc3", name: "Receipts_Q1.zip", type: "zip", uploadedAt: "2025-08-05T11:10:00Z" },
+    { id: "doc4", name: "HomeOffice.jpg", type: "image", uploadedAt: "2025-08-09T08:25:00Z" },
+    { id: "doc5", name: "ScheduleC.pdf", type: "pdf", uploadedAt: "2025-08-10T16:40:00Z" },
+  ];
+
+  const initialComments = [
+    {
+      id: "c1",
+      user: "Chris Doe",
+      content: "Uploaded W‑2 and Schedule C. Please confirm if anything is missing.",
+      createdAt: "2025-08-12T10:42:00Z",
+      attachments: [initialDocs[0], initialDocs[4]],
+    },
+    {
+      id: "c2",
+      user: "Alex TaxPro",
+      content: "Looks good. I need the Q2 receipts to finalize deductions.",
+      createdAt: "2025-08-13T15:05:00Z",
+    },
+  ];
+
+  const timeline = [
+    { id: "a1", label: "Customer created", at: customer.createdAt },
+    { id: "a2", label: "Initial documents uploaded", at: "2025-08-01T14:00:00Z" },
+    { id: "a3", label: "Return 1080 filed", at: "2025-07-28T09:15:00Z" },
+    { id: "a4", label: "Comment added by Alex", at: "2025-08-13T15:05:00Z" },
+  ];
+
+  const [openReturnId, setOpenReturnId] = useState(null);
+  const [pricingMode, setPricingMode] = useState("hourly");
+  const [hourlyRate, setHourlyRate] = useState(130);
+  const [lumpSum, setLumpSum] = useState(650);
+  const [docs] = useState(initialDocs);
+  const [comments, setComments] = useState(initialComments);
+  const [newComment, setNewComment] = useState("");
+  const [composerAttachments, setComposerAttachments] = useState([]);
+  const commentInputRef = useRef(null);
+  const fileInputRef = useRef(null);
+
+  function addComment() {
     if (!newComment.trim()) return;
+    const c = {
+      id: `c_${comments.length + 1}`,
+      user: "You",
+      content: newComment.trim(),
+      createdAt: new Date().toISOString(),
+      attachments: composerAttachments.length ? composerAttachments : undefined,
+    };
+    setComments((prev) => [c, ...prev]);
+    setNewComment("");
+    setComposerAttachments([]);
+  }
 
-    try {
-      setIsAddingComment(true);
-      const comment = addComment(id, newComment, user.id, user.name);
-      
-      // Add activity
-      addActivity({
-        user: user.name,
-        action: `Added comment to ${customer.name} account`,
-        entityType: 'customer',
-        entityId: id
-      });
-
-      // Add notification
-      await addNotification({
-        title: 'Comment Added',
-        body: `New comment added to ${customer.name} account`,
-        level: 'info',
-        relatedEntity: { type: 'customer', id }
-      });
-
-      setNewComment('');
-    } catch (error) {
-      console.error('Error adding comment:', error);
-    } finally {
-      setIsAddingComment(false);
-    }
-  };
-
-  const customerReturns = taxReturns.filter(r => r.customerId === id);
-  const customerDocuments = documents.filter(d => d.customerId === id);
-  const customerComments = comments.filter(c => c.customerId === id);
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
+  function removeAttachment(commentId, attachmentId) {
+    setComments((prevComments) =>
+      prevComments.map((comment) =>
+        comment.id === commentId
+          ? {
+              ...comment,
+              attachments: comment.attachments?.filter((attachment) => attachment.id !== attachmentId),
+            }
+          : comment
+      )
     );
   }
 
-  if (!customer) {
-    return (
-      <div className="text-center py-12">
-        <h2 className="text-lg font-medium text-gray-900">Customer not found</h2>
-        <Link to="/customers" className="text-blue-600 hover:text-blue-700 mt-2 inline-block">
-          Back to Customers
-        </Link>
-      </div>
-    );
+  function onFilesSelected(e) {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    const created = files.map((f, i) => ({
+      id: `att_${Date.now()}_${i}`,
+      name: f.name,
+      type: "other",
+      uploadedAt: new Date().toISOString(),
+    }));
+    setComposerAttachments((prev) => [...prev, ...created]);
+    e.currentTarget.value = "";
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center space-x-4">
-        <Link
-          to="/customers"
-          className="p-2 rounded-md hover:bg-gray-100 transition-colors"
-        >
-          <ArrowLeft className="w-5 h-5 text-gray-600" />
-        </Link>
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">{customer.name}</h1>
-          <p className="text-gray-600">Customer Details</p>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Customer Info */}
-        <div className="lg:col-span-2 space-y-6">
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h2 className="text-lg font-medium text-gray-900 mb-4">Basic Information</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="flex items-center space-x-3">
-                <Mail className="w-5 h-5 text-gray-400" />
-                <div>
-                  <p className="text-sm text-gray-500">Email</p>
-                  <p className="text-sm font-medium text-gray-900">{customer.email}</p>
-                </div>
-              </div>
-              <div className="flex items-center space-x-3">
-                <Phone className="w-5 h-5 text-gray-400" />
-                <div>
-                  <p className="text-sm text-gray-500">Mobile</p>
-                  <p className="text-sm font-medium text-gray-900">{customer.mobile}</p>
-                </div>
-              </div>
-              <div className="flex items-center space-x-3">
-                <FileText className="w-5 h-5 text-gray-400" />
-                <div>
-                  <p className="text-sm text-gray-500">SSN</p>
-                  <p className="text-sm font-medium text-gray-900">{customer.ssn}</p>
-                </div>
-              </div>
-              <div className="flex items-center space-x-3">
-                <Calendar className="w-5 h-5 text-gray-400" />
-                <div>
-                  <p className="text-sm text-gray-500">Created</p>
-                  <p className="text-sm font-medium text-gray-900">{formatDate(customer.createdAt)}</p>
-                </div>
-              </div>
-            </div>
+    <main className="mx-auto max-w-6xl space-y-6 p-4 md:p-6">
+      {/* Header */}
+      <header className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <button
+            className="rounded-md p-2 hover:bg-gray-100"
+            onClick={() => window.history.back()}
+            aria-label="Go back"
+          >
+            <ArrowLeft className="h-5 w-5 text-gray-600" />
+          </button>
+          <div>
+            <h1 className="text-balance text-2xl font-bold text-gray-900">{customer.name}</h1>
+            <p className="text-sm text-gray-600">Customer details</p>
           </div>
+        </div>
+        <div className="hidden md:flex items-center gap-6 text-sm text-gray-600">
+          <div className="flex items-center gap-2">
+            <Calendar className="h-4 w-4 text-gray-400" />
+            <span>Created {formatDate(customer.createdAt)}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Clock className="h-4 w-4 text-gray-400" />
+            <span>Updated {formatDate(customer.updatedAt)}</span>
+          </div>
+        </div>
+      </header>
 
-          {/* Tax Returns */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h2 className="text-lg font-medium text-gray-900 mb-4">Tax Returns</h2>
-            {customerReturns.length === 0 ? (
-              <p className="text-gray-500">No tax returns found.</p>
-            ) : (
-              <div className="space-y-3">
-                {customerReturns.map((taxReturn) => (
-                  <Link
-                    key={taxReturn.id}
-                    to="/tax-returns"
-                    className="block p-4 border border-gray-200 rounded-md hover:bg-gray-50 transition-colors"
+      {/* Tax return rows */}
+      <section className="space-y-3">
+        {returns.map((r) => {
+          const isOpen = openReturnId === r.id;
+          return (
+            <div key={r.id} className="rounded-md border border-gray-200 bg-white">
+              <div className="flex items-center justify-between px-4 py-3">
+                <div className="flex items-center gap-3">
+                  <button
+                    className="rounded p-1 hover:bg-gray-100"
+                    onClick={() => setOpenReturnId(isOpen ? null : r.id)}
+                    aria-label={isOpen ? "Hide details" : "Show details"}
+                    title={isOpen ? "Hide details" : "Show details"}
                   >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="text-sm font-medium text-gray-900">{taxReturn.name}</h3>
-                        <p className="text-xs text-gray-500">{taxReturn.type}</p>
+                    {isOpen ? (
+                      <ChevronDown className="h-5 w-5 text-gray-600" />
+                    ) : (
+                      <ChevronRight className="h-5 w-5 text-gray-600" />
+                    )}
+                  </button>
+                  <div className="text-gray-900">{r.name}</div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-sm text-gray-600">status:</span>
+                  <StatusPill status={r.status} />
+                  <button
+                    className="text-sm font-medium text-blue-600 hover:text-blue-700"
+                    onClick={() => setOpenReturnId(isOpen ? null : r.id)}
+                  >
+                    show details
+                  </button>
+                </div>
+              </div>
+
+              {isOpen && (
+                <div className="border-t">
+                  <div className="grid items-start gap-4 p-4 md:grid-cols-4 md:p-6">
+                    {/* Left: return details + docs */}
+                    <div className="md:col-span-3 rounded-md border border-gray-200 bg-white">
+                      <div className="p-4 md:p-6">
+                        <h2 className="mb-2 text-lg font-semibold text-gray-900">Return details</h2>
+                        <p className="text-pretty text-sm leading-6 text-gray-700">{r.details}</p>
+                        <div className="mt-4 grid grid-cols-2 gap-4 text-sm text-gray-600">
+                          <div>
+                            <div className="text-gray-500">Return</div>
+                            <div className="font-medium text-gray-900">{r.name}</div>
+                          </div>
+                          <div>
+                            <div className="text-gray-500">Type</div>
+                            <div className="font-medium text-gray-900">{r.type}</div>
+                          </div>
+                          <div>
+                            <div className="text-gray-500">Last updated</div>
+                            <div className="font-medium text-gray-900">{formatDate(r.updatedAt)}</div>
+                          </div>
+                          <div>
+                            <div className="text-gray-500">Status</div>
+                            <StatusPill status={r.status} />
+                          </div>
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                          taxReturn.status === 'Filed Return' ? 'bg-green-100 text-green-800' :
-                          taxReturn.status === 'In Review' ? 'bg-yellow-100 text-yellow-800' :
-                          'bg-blue-100 text-blue-800'
-                        }`}>
-                          {taxReturn.status}
-                        </span>
-                        <p className="text-xs text-gray-500 mt-1">
-                          Updated {formatDate(taxReturn.updatedAt)}
-                        </p>
+
+                      {/* Documents ribbon */}
+                      <div className="border-t border-gray-200 p-4 md:p-5">
+                        <div className="mb-2 text-sm font-medium text-gray-900">Documents</div>
+                        <div className="flex items-stretch gap-4 overflow-x-auto">
+                          {docs.map((d) => (
+                            <div
+                              key={d.id}
+                              className="group relative flex h-16 w-24 shrink-0 cursor-pointer items-center justify-center rounded-md border border-gray-200 bg-gray-50 hover:bg-gray-100"
+                              title={d.name}
+                              onClick={() => alert(`Preview ${d.name}`)}
+                            >
+                              <DocIcon type={d.type} className="text-gray-600 h-5 w-5" />
+                              <div className="absolute bottom-1 left-1/2 -translate-x-1/2 rounded bg-black/70 px-2 py-0.5 text-[10px] text-white opacity-0 transition-opacity group-hover:opacity-100">
+                                {d.name.length > 14 ? d.name.slice(0, 14) + "…" : d.name}
+                              </div>
+                              <div className="absolute right-1 top-1 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                                <button
+                                  className="rounded bg-white/90 p-1 hover:bg-white"
+                                  aria-label="View"
+                                  title="View"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    alert(`Viewing ${d.name}`);
+                                  }}
+                                >
+                                  <Eye className="h-3.5 w-3.5 text-gray-700" />
+                                </button>
+                                <button
+                                  className="rounded bg-white/90 p-1 hover:bg-white"
+                                  aria-label="Download"
+                                  title="Download"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    alert(`Downloading ${d.name}`);
+                                  }}
+                                >
+                                  <Download className="h-3.5 w-3.5 text-gray-700" />
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     </div>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </div>
 
-          {/* Documents */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h2 className="text-lg font-medium text-gray-900 mb-4">Documents</h2>
-            {customerDocuments.length === 0 ? (
-              <p className="text-gray-500">No documents uploaded.</p>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {customerDocuments.map((document) => (
-                  <div key={document.id} className="border border-gray-200 rounded-md p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="text-sm font-medium text-gray-900 truncate">{document.name}</h3>
-                      <div className="flex items-center space-x-2">
-                        <Link
-                          to={`/documents/${document.id}`}
-                          className="text-blue-600 hover:text-blue-700 transition-colors"
+                    {/* Right: pricing card */}
+                    <aside className="self-start rounded-md border border-gray-200 bg-white p-4 md:p-6">
+                      <div className="mb-4 flex items-center justify-between">
+                        <h3 className="text-lg font-semibold text-gray-900">Pricing</h3>
+                        <DollarSign className="h-5 w-5 text-blue-600" />
+                      </div>
+                      <div className="mb-3 flex items-center gap-2">
+                        <button
+                          onClick={() => setPricingMode("hourly")}
+                          className={`rounded-md px-3 py-1.5 text-sm ${
+                            pricingMode === "hourly"
+                              ? "bg-blue-100 text-blue-700"
+                              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                          }`}
                         >
-                          <Eye className="w-4 h-4" />
-                        </Link>
-                        {can('action:document.download') && (
-                          <button className="text-gray-600 hover:text-gray-700 transition-colors">
-                            <Download className="w-4 h-4" />
-                          </button>
-                        )}
+                          Hourly
+                        </button>
+                        <button
+                          onClick={() => setPricingMode("lump")}
+                          className={`rounded-md px-3 py-1.5 text-sm ${
+                            pricingMode === "lump"
+                              ? "bg-blue-100 text-blue-700"
+                              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                          }`}
+                        >
+                          Lump Sum
+                        </button>
+                      </div>
+
+                      {pricingMode === "hourly" ? (
+                        <div className="mb-4">
+                          <label className="mb-1 block text-sm font-medium text-gray-700">Hourly Rate ($)</label>
+                          <input
+                            type="number"
+                            value={hourlyRate}
+                            onChange={(e) => setHourlyRate(Number(e.target.value))}
+                            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
+                      ) : (
+                        <div className="mb-4">
+                          <label className="mb-1 block text-sm font-medium text-gray-700">Lump Sum ($)</label>
+                          <input
+                            type="number"
+                            value={lumpSum}
+                            onChange={(e) => setLumpSum(Number(e.target.value))}
+                            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
+                      )}
+                      <button
+                        className="w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                        onClick={() =>
+                          alert(
+                            `Saved pricing: ${pricingMode === "hourly" ? `$${hourlyRate}/hr` : `$${lumpSum} lump sum`}`
+                          )
+                        }
+                      >
+                        Save Pricing
+                      </button>
+                    </aside>
+
+                    {/* Comments + Activities */}
+                    <div className="md:col-span-4 rounded-md border border-gray-200 bg-white p-4 md:p-6">
+                      <div className="grid gap-6 md:grid-cols-5">
+                        <div className="md:col-span-4 rounded-md border border-gray-200 bg-white p-3 md:p-4">
+                          <div className="mb-2 flex items-center gap-2">
+                            <MessageSquare className="h-4 w-4 text-gray-500" />
+                            <span className="text-sm font-medium text-gray-900">Comments</span>
+                          </div>
+                          <div className="mb-3">
+                            <label htmlFor={`new-comment-${r.id}`} className="sr-only">
+                              New comment
+                            </label>
+                            <textarea
+                              id={`new-comment-${r.id}`}
+                              value={newComment}
+                              onChange={(e) => setNewComment(e.target.value)}
+                              placeholder="Write a comment…"
+                              rows={4}
+                              className="w-full resize-none rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+                            />
+                            {/* Inline actions inside composer */}
+                            <div className="mt-2 flex items-center justify-between">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <input
+                                  ref={fileInputRef}
+                                  type="file"
+                                  multiple
+                                  className="sr-only"
+                                  onChange={onFilesSelected}
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => fileInputRef.current?.click()}
+                                  className="inline-flex items-center gap-1 rounded-md border border-gray-200 bg-white px-2.5 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
+                                  title="Attach documents"
+                                >
+                                  <Paperclip className="h-4 w-4" />
+                                  Attach
+                                </button>
+                                {composerAttachments.map((a) => (
+                                  <span
+                                    key={a.id}
+                                    className="inline-flex items-center gap-1 rounded border border-gray-200 bg-gray-50 px-2 py-1 text-xs text-gray-700"
+                                  >
+                                    <Paperclip className="h-3.5 w-3.5 text-gray-500" />
+                                    {a.name}
+                                    <button
+                                      type="button"
+                                      aria-label="Remove attachment"
+                                      className="rounded p-0.5 hover:bg-gray-200"
+                                      onClick={() =>
+                                        setComposerAttachments((prev) => prev.filter((d) => d.id !== a.id))
+                                      }
+                                    >
+                                      <X className="h-3 w-3 text-gray-500" />
+                                    </button>
+                                  </span>
+                                ))}
+                              </div>
+                              <button
+                                type="button"
+                                onClick={addComment}
+                                className="inline-flex items-center gap-2 rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
+                                title="Post comment"
+                              >
+                                Post Comment
+                              </button>
+                            </div>
+                          </div>
+                          <ul className="max-h-96 space-y-3 overflow-y-auto pr-1">
+                            {comments.map((c) => (
+                              <li key={c.id} className="rounded-md bg-gray-50 p-3">
+                                <div className="mb-1 flex items-center justify-between">
+                                  <div className="flex items-center gap-2">
+                                    <div className="flex h-7 w-7 items-center justify-center rounded-full border border-gray-300 bg-white text-xs font-semibold text-gray-700">
+                                      {c.user.charAt(0).toUpperCase()}
+                                    </div>
+                                    <span className="text-sm font-medium text-gray-900">{c.user}</span>
+                                  </div>
+                                  <span className="text-xs text-gray-500">{formatDateTime(c.createdAt)}</span>
+                                </div>
+                                <p className="text-sm text-gray-700">{c.content}</p>
+                                {c.attachments && c.attachments.length > 0 && (
+                                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                                    {c.attachments.map((a) => (
+                                      <span
+                                        key={a.id}
+                                        className="inline-flex items-center gap-1 rounded border border-gray-200 bg-white px-2 py-1 text-xs text-gray-700"
+                                      >
+                                        <Paperclip className="h-3.5 w-3.5 text-gray-500" />
+                                        {a.name}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+
+                        <div className="md:col-span-1 rounded-md border border-gray-200 bg-white p-3 md:p-4">
+                          <div className="mb-2 flex items-center gap-2">
+                            <Clock className="h-4 w-4 text-gray-500" />
+                            <span className="text-sm font-medium text-gray-900">Activities timeline</span>
+                          </div>
+                          <ol className="relative ml-2 mt-3 border-l border-gray-200 pl-5">
+                            {timeline.map((t) => (
+                              <li key={t.id} className="mb-5">
+                                <div className="absolute -left-[9px] mt-1 h-4 w-4 rounded-full border-2 border-white bg-blue-600 ring-2 ring-blue-100"></div>
+                                <div className="text-sm font-medium text-gray-900">{t.label}</div>
+                                <div className="text-xs text-gray-500">{formatDateTime(t.at)}</div>
+                              </li>
+                            ))}
+                          </ol>
+                        </div>
                       </div>
                     </div>
-                    <p className="text-xs text-gray-500">
-                      Uploaded {formatDate(document.uploadedAt)}
-                    </p>
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Sidebar */}
-        <div className="space-y-6">
-          {/* Pricing */}
-          {can('action:customer.edit') && (
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <h2 className="text-lg font-medium text-gray-900 mb-4">Pricing</h2>
-              <div className="space-y-4">
-                <div className="flex items-center space-x-4">
-                  <button
-                    onClick={() => setPricingMode('hourly')}
-                    className={`px-3 py-2 text-sm rounded-md transition-colors ${
-                      pricingMode === 'hourly' 
-                        ? 'bg-blue-100 text-blue-700' 
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
-                  >
-                    Hourly
-                  </button>
-                  <button
-                    onClick={() => setPricingMode('lump')}
-                    className={`px-3 py-2 text-sm rounded-md transition-colors ${
-                      pricingMode === 'lump' 
-                        ? 'bg-blue-100 text-blue-700' 
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
-                  >
-                    Lump Sum
-                  </button>
                 </div>
-                
-                {pricingMode === 'hourly' ? (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Hourly Rate ($)
-                    </label>
-                    <input
-                      type="number"
-                      value={hourlyRate}
-                      onChange={(e) => setHourlyRate(Number(e.target.value))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
-                ) : (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Lump Sum ($)
-                    </label>
-                    <input
-                      type="number"
-                      value={lumpSum}
-                      onChange={(e) => setLumpSum(Number(e.target.value))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
-                )}
-                
-                <button className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors">
-                  Save Pricing
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Comments */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h2 className="text-lg font-medium text-gray-900 mb-4">Comments</h2>
-            
-            {can('action:comment.add') && (
-              <form onSubmit={handleAddComment} className="mb-4">
-                <textarea
-                  value={newComment}
-                  onChange={(e) => setNewComment(e.target.value)}
-                  placeholder="Add a comment..."
-                  rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
-                />
-                <button
-                  type="submit"
-                  disabled={isAddingComment || !newComment.trim()}
-                  className="mt-2 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
-                >
-                  {isAddingComment ? 'Adding...' : 'Add Comment'}
-                </button>
-              </form>
-            )}
-            
-            <div className="space-y-3 max-h-64 overflow-y-auto">
-              {customerComments.length === 0 ? (
-                <p className="text-gray-500 text-sm">No comments yet.</p>
-              ) : (
-                customerComments.map((comment) => (
-                  <div key={comment.id} className="p-3 bg-gray-50 rounded-md">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium text-gray-900">{comment.userName}</span>
-                      <span className="text-xs text-gray-500">{formatDateTime(comment.createdAt)}</span>
-                    </div>
-                    <p className="text-sm text-gray-700">{comment.content}</p>
-                  </div>
-                ))
               )}
             </div>
-          </div>
-
-          {/* Timestamps */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h2 className="text-lg font-medium text-gray-900 mb-4">Timeline</h2>
-            <div className="space-y-3">
-              <div className="flex items-center space-x-3">
-                <Clock className="w-4 h-4 text-gray-400" />
-                <div>
-                  <p className="text-sm text-gray-500">Created</p>
-                  <p className="text-sm font-medium text-gray-900">{formatDateTime(customer.createdAt)}</p>
-                </div>
-              </div>
-              <div className="flex items-center space-x-3">
-                <Clock className="w-4 h-4 text-gray-400" />
-                <div>
-                  <p className="text-sm text-gray-500">Last Updated</p>
-                  <p className="text-sm font-medium text-gray-900">{formatDateTime(customer.updatedAt)}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+          );
+        })}
+      </section>
+    </main>
   );
 }
