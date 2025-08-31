@@ -368,9 +368,9 @@ export default function Invoices() {
                           <Download className="w-4 h-4" />
                         </button>
                       )}
-                      {/* <button className="text-gray-600 hover:text-gray-700 transition-colors" aria-label="Edit invoice">
+                      <button className="text-gray-600 hover:text-gray-700 transition-colors" aria-label="Edit invoice">
                         <Edit className="w-4 h-4" />
-                      </button> */}
+                      </button>
                     </div>
                   </td>
                 </tr>

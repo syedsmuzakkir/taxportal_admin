@@ -134,7 +134,7 @@ const handleStatusClick = (status) => {
         </div>
         <div>
           <h1 className="text-lg font-bold text-gray-900">TaxPortal</h1>
-          <p className="text-xs text-gray-500">Demo</p>
+          {/* <p className="text-xs text-gray-500">Demo</p> */}
         </div>
       </div>
     )}
@@ -234,10 +234,10 @@ const handleStatusClick = (status) => {
           </button>
           
           {showNotifications && (
-            <div className="absolute bottom-full left-0 mb-2 w-80 bg-white rounded-md shadow-lg border border-gray-200 z-50">
-              <NotificationCenter onClose={() => setShowNotifications(false)} />
-            </div>
-          )}
+  <div className="absolute bottom-full left-0 mb-2 w-80 bg-white rounded-md shadow-lg border border-gray-200 z-50">
+    <NotificationCenter onClose={() => setShowNotifications(false)} />
+  </div>
+)}
         </div>
 
         {/* User Menu */}
