@@ -26,7 +26,8 @@ function formatDateTime(iso) {
 }
 
 function StatusPill({ status }) {
-  const base = "inline-flex items-center rounded-full px-2 py-1 text-xs font-medium";
+  const base =
+    "inline-flex items-center rounded-full px-2 py-1 text-xs font-medium";
   const tone =
     status === "Filed"
       ? "bg-green-100 text-green-800"
@@ -62,7 +63,8 @@ export default function CustomerDetail() {
       type: "Individual",
       status: "In Progress",
       updatedAt: "2025-08-18T12:00:00Z",
-      details: "Gathered W‑2 and 1099 forms. Pending review of Schedule C expenses and charity deductions.",
+      details:
+        "Gathered W‑2 and 1099 forms. Pending review of Schedule C expenses and charity deductions.",
     },
     {
       id: "ret_1080",
@@ -70,23 +72,50 @@ export default function CustomerDetail() {
       type: "Business",
       status: "Filed",
       updatedAt: "2025-07-28T09:15:00Z",
-      details: "Filed with confirmation number #A1B2C3. Awaiting IRS acknowledgement.",
+      details:
+        "Filed with confirmation number #A1B2C3. Awaiting IRS acknowledgement.",
     },
   ];
 
   const initialDocs = [
-    { id: "doc1", name: "W2_2024.pdf", type: "pdf", uploadedAt: "2025-08-01T14:00:00Z" },
-    { id: "doc2", name: "1099.csv", type: "csv", uploadedAt: "2025-08-03T09:30:00Z" },
-    { id: "doc3", name: "Receipts_Q1.zip", type: "zip", uploadedAt: "2025-08-05T11:10:00Z" },
-    { id: "doc4", name: "HomeOffice.jpg", type: "image", uploadedAt: "2025-08-09T08:25:00Z" },
-    { id: "doc5", name: "ScheduleC.pdf", type: "pdf", uploadedAt: "2025-08-10T16:40:00Z" },
+    {
+      id: "doc1",
+      name: "W2_2024.pdf",
+      type: "pdf",
+      uploadedAt: "2025-08-01T14:00:00Z",
+    },
+    {
+      id: "doc2",
+      name: "1099.csv",
+      type: "csv",
+      uploadedAt: "2025-08-03T09:30:00Z",
+    },
+    {
+      id: "doc3",
+      name: "Receipts_Q1.zip",
+      type: "zip",
+      uploadedAt: "2025-08-05T11:10:00Z",
+    },
+    {
+      id: "doc4",
+      name: "HomeOffice.jpg",
+      type: "image",
+      uploadedAt: "2025-08-09T08:25:00Z",
+    },
+    {
+      id: "doc5",
+      name: "ScheduleC.pdf",
+      type: "pdf",
+      uploadedAt: "2025-08-10T16:40:00Z",
+    },
   ];
 
   const initialComments = [
     {
       id: "c1",
       user: "Chris Doe",
-      content: "Uploaded W‑2 and Schedule C. Please confirm if anything is missing.",
+      content:
+        "Uploaded W‑2 and Schedule C. Please confirm if anything is missing.",
       createdAt: "2025-08-12T10:42:00Z",
       attachments: [initialDocs[0], initialDocs[4]],
     },
@@ -96,13 +125,6 @@ export default function CustomerDetail() {
       content: "Looks good. I need the Q2 receipts to finalize deductions.",
       createdAt: "2025-08-13T15:05:00Z",
     },
-  ];
-
-  const timeline = [
-    { id: "a1", label: "Customer created", at: customer.createdAt },
-    { id: "a2", label: "Initial documents uploaded", at: "2025-08-01T14:00:00Z" },
-    { id: "a3", label: "Return 1080 filed", at: "2025-07-28T09:15:00Z" },
-    { id: "a4", label: "Comment added by Alex", at: "2025-08-13T15:05:00Z" },
   ];
 
   const [openReturnId, setOpenReturnId] = useState(null);
@@ -116,31 +138,73 @@ export default function CustomerDetail() {
   const commentInputRef = useRef(null);
   const fileInputRef = useRef(null);
 
+  // Create initial timeline with comments integrated
+  const initialTimeline = [
+    {
+      id: "a1",
+      label: "Customer created",
+      at: customer.createdAt,
+      type: "event",
+    },
+    {
+      id: "a2",
+      label: "Initial documents uploaded",
+      at: "2025-08-01T14:00:00Z",
+      type: "event",
+    },
+    {
+      id: "a3",
+      label: "Return 1080 filed",
+      at: "2025-07-28T09:15:00Z",
+      type: "event",
+    },
+    ...initialComments.map((comment) => ({
+      id: comment.id,
+      label: "Comment added",
+      at: comment.createdAt,
+      type: "comment",
+      user: comment.user,
+      content: comment.content,
+      attachments: comment.attachments,
+    })),
+  ].sort((a, b) => new Date(b.at) - new Date(a.at)); // Sort by date, newest first
+
+  const [timeline, setTimeline] = useState(initialTimeline);
+
   function addComment() {
     if (!newComment.trim()) return;
-    const c = {
-      id: `c_${comments.length + 1}`,
+
+    const newCommentObj = {
+      id: `c_${Date.now()}`,
       user: "You",
       content: newComment.trim(),
       createdAt: new Date().toISOString(),
-      attachments: composerAttachments.length ? composerAttachments : undefined,
+      attachments: composerAttachments.length
+        ? [...composerAttachments]
+        : undefined,
     };
-    setComments((prev) => [c, ...prev]);
+
+    // Add to comments
+    setComments((prev) => [newCommentObj, ...prev]);
+
+    // Add to timeline
+    const timelineItem = {
+      id: newCommentObj.id,
+      label: "Comment added",
+      at: newCommentObj.createdAt,
+      type: "comment",
+      user: newCommentObj.user,
+      content: newCommentObj.content,
+      attachments: newCommentObj.attachments,
+    };
+
+    setTimeline((prev) =>
+      [timelineItem, ...prev].sort((a, b) => new Date(b.at) - new Date(a.at))
+    );
+
+    // Reset form
     setNewComment("");
     setComposerAttachments([]);
-  }
-
-  function removeAttachment(commentId, attachmentId) {
-    setComments((prevComments) =>
-      prevComments.map((comment) =>
-        comment.id === commentId
-          ? {
-              ...comment,
-              attachments: comment.attachments?.filter((attachment) => attachment.id !== attachmentId),
-            }
-          : comment
-      )
-    );
   }
 
   function onFilesSelected(e) {
@@ -169,7 +233,9 @@ export default function CustomerDetail() {
             <ArrowLeft className="h-5 w-5 text-gray-600" />
           </button>
           <div>
-            <h1 className="text-balance text-2xl font-bold text-gray-900">{customer.name}</h1>
+            <h1 className="text-balance text-2xl font-bold text-gray-900">
+              {customer.name}
+            </h1>
             <p className="text-sm text-gray-600">Customer details</p>
           </div>
         </div>
@@ -190,7 +256,10 @@ export default function CustomerDetail() {
         {returns.map((r) => {
           const isOpen = openReturnId === r.id;
           return (
-            <div key={r.id} className="rounded-md border border-gray-200 bg-white">
+            <div
+              key={r.id}
+              className="rounded-md border border-gray-200 bg-white"
+            >
               <div className="flex items-center justify-between px-4 py-3">
                 <div className="flex items-center gap-3">
                   <button
@@ -225,20 +294,30 @@ export default function CustomerDetail() {
                     {/* Left: return details + docs */}
                     <div className="md:col-span-3 rounded-md border border-gray-200 bg-white">
                       <div className="p-4 md:p-6">
-                        <h2 className="mb-2 text-lg font-semibold text-gray-900">Return details</h2>
-                        <p className="text-pretty text-sm leading-6 text-gray-700">{r.details}</p>
+                        <h2 className="mb-2 text-lg font-semibold text-gray-900">
+                          Return details
+                        </h2>
+                        <p className="text-pretty text-sm leading-6 text-gray-700">
+                          {r.details}
+                        </p>
                         <div className="mt-4 grid grid-cols-2 gap-4 text-sm text-gray-600">
                           <div>
                             <div className="text-gray-500">Return</div>
-                            <div className="font-medium text-gray-900">{r.name}</div>
+                            <div className="font-medium text-gray-900">
+                              {r.name}
+                            </div>
                           </div>
                           <div>
                             <div className="text-gray-500">Type</div>
-                            <div className="font-medium text-gray-900">{r.type}</div>
+                            <div className="font-medium text-gray-900">
+                              {r.type}
+                            </div>
                           </div>
                           <div>
                             <div className="text-gray-500">Last updated</div>
-                            <div className="font-medium text-gray-900">{formatDate(r.updatedAt)}</div>
+                            <div className="font-medium text-gray-900">
+                              {formatDate(r.updatedAt)}
+                            </div>
                           </div>
                           <div>
                             <div className="text-gray-500">Status</div>
@@ -249,7 +328,9 @@ export default function CustomerDetail() {
 
                       {/* Documents ribbon */}
                       <div className="border-t border-gray-200 p-4 md:p-5">
-                        <div className="mb-2 text-sm font-medium text-gray-900">Documents</div>
+                        <div className="mb-2 text-sm font-medium text-gray-900">
+                          Documents
+                        </div>
                         <div className="flex items-stretch gap-4 overflow-x-auto">
                           {docs.map((d) => (
                             <div
@@ -258,9 +339,14 @@ export default function CustomerDetail() {
                               title={d.name}
                               onClick={() => alert(`Preview ${d.name}`)}
                             >
-                              <DocIcon type={d.type} className="text-gray-600 h-5 w-5" />
+                              <DocIcon
+                                type={d.type}
+                                className="text-gray-600 h-5 w-5"
+                              />
                               <div className="absolute bottom-1 left-1/2 -translate-x-1/2 rounded bg-black/70 px-2 py-0.5 text-[10px] text-white opacity-0 transition-opacity group-hover:opacity-100">
-                                {d.name.length > 14 ? d.name.slice(0, 14) + "…" : d.name}
+                                {d.name.length > 14
+                                  ? d.name.slice(0, 14) + "…"
+                                  : d.name}
                               </div>
                               <div className="absolute right-1 top-1 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
                                 <button
@@ -295,7 +381,9 @@ export default function CustomerDetail() {
                     {/* Right: pricing card */}
                     <aside className="self-start rounded-md border border-gray-200 bg-white p-4 md:p-6">
                       <div className="mb-4 flex items-center justify-between">
-                        <h3 className="text-lg font-semibold text-gray-900">Pricing</h3>
+                        <h3 className="text-lg font-semibold text-gray-900">
+                          Pricing
+                        </h3>
                         <DollarSign className="h-5 w-5 text-blue-600" />
                       </div>
                       <div className="mb-3 flex items-center gap-2">
@@ -323,17 +411,23 @@ export default function CustomerDetail() {
 
                       {pricingMode === "hourly" ? (
                         <div className="mb-4">
-                          <label className="mb-1 block text-sm font-medium text-gray-700">Hourly Rate ($)</label>
+                          <label className="mb-1 block text-sm font-medium text-gray-700">
+                            Hourly Rate ($)
+                          </label>
                           <input
                             type="number"
                             value={hourlyRate}
-                            onChange={(e) => setHourlyRate(Number(e.target.value))}
+                            onChange={(e) =>
+                              setHourlyRate(Number(e.target.value))
+                            }
                             className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
                           />
                         </div>
                       ) : (
                         <div className="mb-4">
-                          <label className="mb-1 block text-sm font-medium text-gray-700">Lump Sum ($)</label>
+                          <label className="mb-1 block text-sm font-medium text-gray-700">
+                            Lump Sum ($)
+                          </label>
                           <input
                             type="number"
                             value={lumpSum}
@@ -346,7 +440,11 @@ export default function CustomerDetail() {
                         className="w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
                         onClick={() =>
                           alert(
-                            `Saved pricing: ${pricingMode === "hourly" ? `$${hourlyRate}/hr` : `$${lumpSum} lump sum`}`
+                            `Saved pricing: ${
+                              pricingMode === "hourly"
+                                ? `$${hourlyRate}/hr`
+                                : `$${lumpSum} lump sum`
+                            }`
                           )
                         }
                       >
@@ -354,16 +452,22 @@ export default function CustomerDetail() {
                       </button>
                     </aside>
 
-                    {/* Comments + Activities */}
+                    {/* Comment composer + Activities timeline */}
                     <div className="md:col-span-4 rounded-md border border-gray-200 bg-white p-4 md:p-6">
-                      <div className="grid gap-6 md:grid-cols-5">
-                        <div className="md:col-span-4 rounded-md border border-gray-200 bg-white p-3 md:p-4">
+                      <div className="grid gap-6">
+                        {/* Comment composer */}
+                        <div className="rounded-md border border-gray-200 bg-white p-3 md:p-4">
                           <div className="mb-2 flex items-center gap-2">
                             <MessageSquare className="h-4 w-4 text-gray-500" />
-                            <span className="text-sm font-medium text-gray-900">Comments</span>
+                            <span className="text-sm font-medium text-gray-900">
+                              Add Comment
+                            </span>
                           </div>
                           <div className="mb-3">
-                            <label htmlFor={`new-comment-${r.id}`} className="sr-only">
+                            <label
+                              htmlFor={`new-comment-${r.id}`}
+                              className="sr-only"
+                            >
                               New comment
                             </label>
                             <textarea
@@ -405,7 +509,9 @@ export default function CustomerDetail() {
                                       aria-label="Remove attachment"
                                       className="rounded p-0.5 hover:bg-gray-200"
                                       onClick={() =>
-                                        setComposerAttachments((prev) => prev.filter((d) => d.id !== a.id))
+                                        setComposerAttachments((prev) =>
+                                          prev.filter((d) => d.id !== a.id)
+                                        )
                                       }
                                     >
                                       <X className="h-3 w-3 text-gray-500" />
@@ -423,48 +529,77 @@ export default function CustomerDetail() {
                               </button>
                             </div>
                           </div>
-                          <ul className="max-h-96 space-y-3 overflow-y-auto pr-1">
-                            {comments.map((c) => (
-                              <li key={c.id} className="rounded-md bg-gray-50 p-3">
-                                <div className="mb-1 flex items-center justify-between">
-                                  <div className="flex items-center gap-2">
-                                    <div className="flex h-7 w-7 items-center justify-center rounded-full border border-gray-300 bg-white text-xs font-semibold text-gray-700">
-                                      {c.user.charAt(0).toUpperCase()}
-                                    </div>
-                                    <span className="text-sm font-medium text-gray-900">{c.user}</span>
-                                  </div>
-                                  <span className="text-xs text-gray-500">{formatDateTime(c.createdAt)}</span>
-                                </div>
-                                <p className="text-sm text-gray-700">{c.content}</p>
-                                {c.attachments && c.attachments.length > 0 && (
-                                  <div className="mt-2 flex flex-wrap items-center gap-2">
-                                    {c.attachments.map((a) => (
-                                      <span
-                                        key={a.id}
-                                        className="inline-flex items-center gap-1 rounded border border-gray-200 bg-white px-2 py-1 text-xs text-gray-700"
-                                      >
-                                        <Paperclip className="h-3.5 w-3.5 text-gray-500" />
-                                        {a.name}
-                                      </span>
-                                    ))}
-                                  </div>
-                                )}
-                              </li>
-                            ))}
-                          </ul>
                         </div>
 
-                        <div className="md:col-span-1 rounded-md border border-gray-200 bg-white p-3 md:p-4">
+                        {/* Activities timeline with comments */}
+                        <div className="rounded-md border border-gray-200 bg-white p-3 md:p-4">
                           <div className="mb-2 flex items-center gap-2">
                             <Clock className="h-4 w-4 text-gray-500" />
-                            <span className="text-sm font-medium text-gray-900">Activities timeline</span>
+                            <span className="text-sm font-medium text-gray-900">
+                              Activities timeline
+                            </span>
                           </div>
-                          <ol className="relative ml-2 mt-3 border-l border-gray-200 pl-5">
-                            {timeline.map((t) => (
-                              <li key={t.id} className="mb-5">
-                                <div className="absolute -left-[9px] mt-1 h-4 w-4 rounded-full border-2 border-white bg-blue-600 ring-2 ring-blue-100"></div>
-                                <div className="text-sm font-medium text-gray-900">{t.label}</div>
-                                <div className="text-xs text-gray-500">{formatDateTime(t.at)}</div>
+                          <ol className="relative mt-3 max-h-96 overflow-y-auto">
+                            {timeline.map((t, index) => (
+                              <li key={t.id} className=" flex">
+                                <div className="flex flex-col items-center flex-shrink-0 mr-4">
+                                  {index !== 0 && (
+                                    <div className="w-0.5 h-4 bg-blue-100 mb-1"></div>
+                                  )}
+
+                                  <div className="h-4 w-4 rounded-full border-2 border-white bg-blue-600 ring-2 ring-blue-100 z-10"></div>
+
+                                  {index !== timeline.length - 1 && (
+                                    <div className="w-0.5 h-4 bg-blue-100 mt-1 flex-grow"></div>
+                                  )}
+                                </div>
+
+                                {/* Timeline content */}
+                                <div className="flex-1 min-w-0">
+                                  {t.type === "comment" ? (
+                                    <div className=" p-3 rounded-md">
+                                      <div className="mb-1 flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                          <div className="flex h-7 w-7 items-center justify-center rounded-full border border-gray-300 bg-white text-xs font-semibold text-gray-700">
+                                            {t.user.charAt(0).toUpperCase()}
+                                          </div>
+                                          <span className="text-sm font-medium text-gray-900">
+                                            {t.user}
+                                          </span>
+                                        </div>
+                                        <span className="text-xs text-gray-500">
+                                          {formatDateTime(t.at)}
+                                        </span>
+                                      </div>
+                                      <p className="text-sm text-gray-700">
+                                        {t.content}
+                                      </p>
+                                      {t.attachments &&
+                                        t.attachments.length > 0 && (
+                                          <div className="mt-2 flex flex-wrap items-center gap-2">
+                                            {t.attachments.map((a) => (
+                                              <span
+                                                key={a.id}
+                                                className="inline-flex items-center gap-1 rounded border border-gray-200 bg-white px-2 py-1 text-xs text-gray-700"
+                                              >
+                                                <Paperclip className="h-3.5 w-3.5 text-gray-500" />
+                                                {a.name}
+                                              </span>
+                                            ))}
+                                          </div>
+                                        )}
+                                    </div>
+                                  ) : (
+                                    <>
+                                      <div className="text-sm font-medium text-gray-900">
+                                        {t.label}
+                                      </div>
+                                      <div className="text-xs text-gray-500">
+                                        {formatDateTime(t.at)}
+                                      </div>
+                                    </>
+                                  )}
+                                </div>
                               </li>
                             ))}
                           </ol>
