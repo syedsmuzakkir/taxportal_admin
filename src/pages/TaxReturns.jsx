@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link,useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useData } from '../contexts/DataContext.jsx';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { usePermissions } from '../contexts/PermissionsContext.jsx';
@@ -8,7 +8,6 @@ import { returnsAPI } from '../api/returns.js';
 import { Filter, FileText, User, Clock, Edit, Eye, Plus } from 'lucide-react';
 import { formatDate } from '../utils/dateUtils.js';
 import Modal from '../components/Modal.jsx';
-
 
 const statuses = [
   'All',
@@ -48,59 +47,55 @@ export default function TaxReturns() {
     status: 'Initial Request'
   });
 
-
   const location = useLocation();
 
-// New useEffect for URL parameters:
-useEffect(() => {
-  const queryParams = new URLSearchParams(location.search);
-  const statusParam = queryParams.get('status');
-  if (statusParam && statuses.includes(statusParam)) {
-    setSelectedStatus(statusParam);
-  }
-}, [location.search]);
-
-
+  useEffect(() => {
+    const queryParams = new URLSearchParams(location.search);
+    const statusParam = queryParams.get('status');
+    if (statusParam && statuses.includes(statusParam)) {
+      setSelectedStatus(statusParam);
+    }
+  }, [location.search]);
 
   useEffect(() => {
     loadReturns();
   }, [contextReturns]);
 
- const loadReturns = async () => {
-  try {
-    setIsLoading(true);
-    const returns = await returnsAPI.getAll();
-    
-    // Filter returns based on user permissions
-    const filteredReturns = returns.filter(returnItem => {
-      // Admins and reviewers can see all returns
-      if (user.role === 'admin' || user.role === 'reviewer') {
-        return true;
-      }
+  const loadReturns = async () => {
+    try {
+      setIsLoading(true);
+      const returns = await returnsAPI.getAll();
       
-      // Users can see returns they created or are assigned to
-      if (user.role === 'user') {
-        return returnItem.createdBy === user.id || returnItem.assignedTo === user.id;
-      }
+      // Filter returns based on permissions
+      const filteredReturns = returns.filter(returnItem => {
+        // Admins and reviewers can see all returns
+        if (can('view:all_returns')) {
+          return true;
+        }
+        
+        // Users can see returns they created or are assigned to
+        if (can('view:assigned_returns')) {
+          return returnItem.createdBy === user.id || returnItem.assignedTo === user.id;
+        }
+        
+        // Clients can only see their own returns
+        if (can('view:own_returns')) {
+          return returnItem.customerId === user.customerId;
+        }
+        
+        return false;
+      });
       
-      // Clients can only see their own returns
-      if (user.role === 'client') {
-        return returnItem.customerId === user.customerId;
-      }
-      
-      return false;
-    });
-    
-    setTaxReturns(filteredReturns);
-  } catch (error) {
-    console.error('Error loading tax returns:', error);
-  } finally {
-    setIsLoading(false);
-  }
-};
+      setTaxReturns(filteredReturns);
+    } catch (error) {
+      console.error('Error loading tax returns:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleStatusChange = async (returnId, newStatus, returnData) => {
-    if (!can('action:return.update_status')) return;
+    if (!can('update_status:return')) return;
 
     try {
       setUpdatingStatus({ ...updatingStatus, [returnId]: true });
@@ -140,18 +135,20 @@ useEffect(() => {
   const handleCreateReturn = async (e) => {
     e.preventDefault();
     
+    if (!can('create:return')) return;
+    
     try {
       const customer = customers.find(c => c.id === newReturn.customerId);
-     const returnData = {
-  ...newReturn,
-  id: Date.now().toString(),
-  customerName: customer?.name || '',
-  assignedReviewer: null,
-  reviewerId: null,
-  createdBy: user.id,  // New field
-  createdAt: new Date().toISOString(),
-  updatedAt: new Date().toISOString()
-};
+      const returnData = {
+        ...newReturn,
+        id: Date.now().toString(),
+        customerName: customer?.name || '',
+        assignedReviewer: null,
+        reviewerId: null,
+        createdBy: user.id,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
 
       const updatedReturns = [...taxReturns, returnData];
       setTaxReturns(updatedReturns);
@@ -193,25 +190,6 @@ useEffect(() => {
     ? taxReturns 
     : taxReturns.filter(r => r.status === selectedStatus);
 
-//   const filteredReturns = returns.filter(returnItem => {
-//   // Admins and reviewers can see all returns
-//   if (user.role === 'admin' || user.role === 'reviewer') {
-//     return true;
-//   }
-  
-//   // Users can see returns they created or are assigned to
-//   if (user.role === 'user') {
-//     return returnItem.createdBy === user.id || returnItem.assignedTo === user.id;
-//   }
-  
-//   // Clients can only see their own returns
-//   if (user.role === 'client') {
-//     return returnItem.customerId === user.customerId;
-//   }
-  
-//   return false;
-// });
-
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -224,7 +202,7 @@ useEffect(() => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Tax Returns</h1>
-        {can('action:return.edit') && (
+        {can('create:return') && (
           <button
             onClick={() => setShowCreateModal(true)}
             className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors flex items-center"
@@ -296,7 +274,7 @@ useEffect(() => {
                     <div className="text-sm text-gray-900">{taxReturn.customerName}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    {can('action:return.update_status') ? (
+                    {can('update_status:return') ? (
                       <select
                         value={taxReturn.status}
                         onChange={(e) => handleStatusChange(taxReturn.id, e.target.value, taxReturn)}
@@ -340,7 +318,7 @@ useEffect(() => {
                       >
                         <Eye className="w-4 h-4" />
                       </button>
-                      {can('action:return.edit') && (
+                      {can('edit:return') && (
                         <button 
                           className="text-gray-600 hover:text-gray-700 transition-colors"
                           title="Edit Return"
@@ -361,11 +339,11 @@ useEffect(() => {
             <FileText className="mx-auto h-12 w-12 text-gray-400" />
             <h3 className="mt-2 text-sm font-medium text-gray-900">No returns found</h3>
             <p className="mt-1 text-sm text-gray-500">
-             {selectedStatus !== 'All' && (
-  <div className="text-sm text-gray-600">
-    Filtered by: <span className="font-medium">{selectedStatus}</span>
-  </div>
-)}
+              {selectedStatus !== 'All' && (
+                <div className="text-sm text-gray-600">
+                  Filtered by: <span className="font-medium">{selectedStatus}</span>
+                </div>
+              )}
             </p>
           </div>
         )}
@@ -498,7 +476,6 @@ useEffect(() => {
     </div>
   );
 }
-
 
 
 

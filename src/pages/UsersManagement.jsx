@@ -153,9 +153,12 @@ export default function UsersManagement() {
     const category = key.split(':')[0];
     if (!acc[category]) acc[category] = [];
     acc[category].push(key);
+    
     return acc;
   }, {});
 
+
+  
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
