@@ -1021,9 +1021,7 @@ export default function CustomerDetail() {
     if (!files || files.length === 0) return [];
 
     const formData = new FormData();
-    files.forEach((file) => {
-      formData.append('documents', file);
-    });
+    
 
     formData.append('customerId', customerId);
     formData.append('taxReturnId', returnId);
@@ -1032,7 +1030,9 @@ export default function CustomerDetail() {
     formData.append('customerName', customerName);
     formData.append('comment', newComment);
     formData.append('category', category);
-
+files.forEach((file) => {
+      formData.append('documents', file);
+    });
     try {
       const response = await fetch(`${BASE_URL}/api/upload-documents`, {
         method: 'POST',
@@ -1047,42 +1047,95 @@ export default function CustomerDetail() {
     }
   };
 
-  const addComment = async () => {
-    if (!newComment.trim() && composerAttachments.length === 0) {
-      alert("Please add a comment or attach files");
-      return;
-    }
+  // const addComment = async () => {
+  //   if (!newComment.trim() && composerAttachments.length === 0) {
+  //     alert("Please add a comment or attach files");
+  //     return;
+  //   }
 
-    try {
-      setIsUploading(true);
-      let uploadedDocuments = [];
+  //   try {
+  //     setIsUploading(true);
+  //     let uploadedDocuments = [];
       
-      if (composerAttachments.length > 0) {
-        const filesToUpload = composerAttachments.map(attachment => attachment.file).filter(Boolean);
-        if (filesToUpload.length > 0) {
-          uploadedDocuments = await uploadDocuments(filesToUpload);
-        }
+  //     if (composerAttachments.length > 0) {
+  //       const filesToUpload = composerAttachments.map(attachment => attachment.file).filter(Boolean);
+  //       if (filesToUpload.length > 0) {
+  //         uploadedDocuments = await uploadDocuments(filesToUpload);
+  //       }
+  //     }
+
+  //     setNewComment("");
+  //     setComposerAttachments([]);
+
+  //     if (openReturnId && uploadedDocuments.length > 0) {
+  //       const response = await fetch(`${BASE_URL}/api/documents/${openReturnId}`);
+  //       if (response.ok) {
+  //         const updatedDocuments = await response.json();
+  //         setDocuments(updatedDocuments);
+  //       }
+  //     }
+
+  //     alert(`Successfully ${uploadedDocuments.length > 0 ? 'uploaded documents and ' : ''}added comment!`);
+  //   } catch (error) {
+  //     console.error('Error adding comment/uploading documents:', error);
+  //     alert(`Error: ${error.message}`);
+  //   } finally {
+  //     setIsUploading(false);
+  //   }
+  // };
+
+
+  const addComment = async () => {
+  if (!newComment.trim() && composerAttachments.length === 0) {
+    alert("Please add a comment or attach files");
+    return;
+  }
+
+  try {
+    setIsUploading(true);
+    let uploadedDocuments = [];
+    
+    if (composerAttachments.length > 0) {
+      const filesToUpload = composerAttachments
+        .map((attachment) => attachment.file)
+        .filter(Boolean);
+
+      if (filesToUpload.length > 0) {
+        uploadedDocuments = await uploadDocuments(filesToUpload);
       }
-
-      setNewComment("");
-      setComposerAttachments([]);
-
-      if (openReturnId && uploadedDocuments.length > 0) {
-        const response = await fetch(`${BASE_URL}/api/documents/${openReturnId}`);
-        if (response.ok) {
-          const updatedDocuments = await response.json();
-          setDocuments(updatedDocuments);
-        }
-      }
-
-      alert(`Successfully ${uploadedDocuments.length > 0 ? 'uploaded documents and ' : ''}added comment!`);
-    } catch (error) {
-      console.error('Error adding comment/uploading documents:', error);
-      alert(`Error: ${error.message}`);
-    } finally {
-      setIsUploading(false);
     }
-  };
+
+    setNewComment("");
+    setComposerAttachments([]);
+
+    // ✅ Refresh documents
+    if (openReturnId) {
+      const response = await fetch(`${BASE_URL}/api/documents/${openReturnId}`);
+      if (response.ok) {
+        const updatedDocuments = await response.json();
+        setDocuments(updatedDocuments);
+      }
+
+      // ✅ Refresh timeline as well
+      const timelineRes = await fetch(`${BASE_URL}/api/comments/${openReturnId}`);
+      if (timelineRes.ok) {
+        const updatedTimeline = await timelineRes.json();
+        setTimeline(updatedTimeline);
+      }
+    }
+
+    alert(
+      `Successfully ${
+        uploadedDocuments.length > 0 ? "uploaded documents and " : ""
+      }added comment!`
+    );
+  } catch (error) {
+    console.error("Error adding comment/uploading documents:", error);
+    alert(`Error: ${error.message}`);
+  } finally {
+    setIsUploading(false);
+  }
+};
 
   const onFilesSelected = (e) => {
     const files = Array.from(e.target.files || []);

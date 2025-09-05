@@ -206,7 +206,9 @@ const handleUpdateStatus = async (id, newStatus) => {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredReturns.map((taxReturn) => (
+                
                 <tr key={taxReturn.id} className="hover:bg-gray-50 transition-colors">
+                  {console.log(taxReturn)}
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <FileText className="w-5 h-5 text-gray-400 mr-3" />
@@ -265,7 +267,8 @@ const handleUpdateStatus = async (id, newStatus) => {
                       className="text-blue-600 hover:text-blue-700 transition-colors flex items-center space-x-1"
                     > */}
                     <Link
-                to={`/customers/${taxReturn.id}`}
+                to={`/customers/${taxReturn.customer_id
+}`}
                 className="text-blue-600 hover:text-blue-700 transition-colors text-sm"
               >
                       <Eye className="w-4 h-4" />
