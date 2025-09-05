@@ -4,7 +4,6 @@ import { useData } from '../contexts/DataContext.jsx';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { usePermissions } from '../contexts/PermissionsContext.jsx';
 import { useNotifications } from '../contexts/NotificationsContext.jsx';
-import { returnsAPI } from '../api/returns.js';
 import { Filter, FileText, User, Clock, Edit, Eye, Plus } from 'lucide-react';
 import { formatDate } from '../utils/dateUtils.js';
 import Modal from '../components/Modal.jsx';
@@ -31,23 +30,14 @@ const statusColors = {
 export default function TaxReturns() {
   const { user } = useAuth();
   const { can } = usePermissions();
-  const { taxReturns: contextReturns, updateTaxReturns, users, customers, addActivity } = useData();
   const { addNotification } = useNotifications();
+  const location = useLocation();
+
   const [taxReturns, setTaxReturns] = useState([]);
   const [selectedStatus, setSelectedStatus] = useState('All');
   const [isLoading, setIsLoading] = useState(true);
-  const [updatingStatus, setUpdatingStatus] = useState({});
-  const [showCreateModal, setShowCreateModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedReturn, setSelectedReturn] = useState(null);
-  const [newReturn, setNewReturn] = useState({
-    name: '',
-    customerId: '',
-    type: 'Federal',
-    status: 'Initial Request'
-  });
-
-  const location = useLocation();
 
   useEffect(() => {
     const queryParams = new URLSearchParams(location.search);
@@ -58,137 +48,102 @@ export default function TaxReturns() {
   }, [location.search]);
 
   useEffect(() => {
-    loadReturns();
-  }, [contextReturns]);
+    fetchAllReturns();
+  }, []);
 
-  const loadReturns = async () => {
+  const fetchAllReturns = async () => {
     try {
       setIsLoading(true);
-      const returns = await returnsAPI.getAll();
-      
-      // Filter returns based on permissions
-      const filteredReturns = returns.filter(returnItem => {
-        // Admins and reviewers can see all returns
-        if (can('view:all_returns')) {
-          return true;
-        }
-        
-        // Users can see returns they created or are assigned to
-        if (can('view:assigned_returns')) {
-          return returnItem.createdBy === user.id || returnItem.assignedTo === user.id;
-        }
-        
-        // Clients can only see their own returns
-        if (can('view:own_returns')) {
-          return returnItem.customerId === user.customerId;
-        }
-        
-        return false;
-      });
-      
-      setTaxReturns(filteredReturns);
+      const res = await fetch("https://taxation-backend.onrender.com/api/get-all-returns");
+      const result = await res.json();
+
+      // ✅ set only the array of returns
+      setTaxReturns(result.data || []);
+      console.log("Fetched Returns:", result.data);
     } catch (error) {
-      console.error('Error loading tax returns:', error);
+      console.error("Error fetching returns:", error);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleStatusChange = async (returnId, newStatus, returnData) => {
-    if (!can('update_status:return')) return;
+  const loginId = localStorage.getItem("loginId");
+  const role = localStorage.getItem("role");
 
-    try {
-      setUpdatingStatus({ ...updatingStatus, [returnId]: true });
-      
-      const reviewerId = user.role === 'reviewer' ? user.id : null;
-      const updatedReturn = await returnsAPI.updateStatus(returnId, newStatus, reviewerId);
-      
-      const updatedReturns = taxReturns.map(r => 
-        r.id === returnId ? updatedReturn : r
-      );
-      setTaxReturns(updatedReturns);
-      updateTaxReturns(updatedReturns);
+  // const handleUpdateStatus = async (newStatus) => {
+  //   if (!selectedReturn) return;
 
-      // Add activity
-      addActivity({
-        user: user.name,
-        action: `Changed status to ${newStatus} for ${returnData.customerName}`,
-        entityType: 'return',
-        entityId: returnId
-      });
+  //   try {
+  //     setUpdating(true);
+  //     const res = await fetch(
+  //       `https://2aa85db8069364de8ca5fae1fd182421.serveo.net/api/update-status/${selectedReturn.id}`,
+  //       {
+  //         method: "PUT",
+  //         headers: { "Content-Type": "application/json" },
+  //         body: JSON.stringify({
+  //           newStatus,
+  //           createdby_type: role,
+  //           createdby_id: loginId
+  //         })
+  //       }
+  //     );
 
-      // Add notification
-      await addNotification({
-        title: 'Return Status Updated',
-        body: `${returnData.customerName}'s return has been moved to ${newStatus}`,
-        level: 'info',
-        relatedEntity: { type: 'return', id: returnId }
-      });
+  //     // if (!res.ok) throw new Error("Failed to update status");
 
-    } catch (error) {
-      console.error('Error updating status:', error);
-    } finally {
-      setUpdatingStatus({ ...updatingStatus, [returnId]: false });
+  //     addNotification("Status updated successfully", "success");
+
+  //     // ✅ refresh list
+  //     fetchAllReturns();
+  //     setShowDetailModal(false);
+  //   } catch (err) {
+  //     console.error("Update error:", err);
+  //     addNotification("Failed to update status", "error");
+  //   } finally {
+  //     setUpdating(false);
+  //   }
+  // };
+
+const handleUpdateStatus = async (id, newStatus) => {
+  try {
+    console.log("Updating status:", id, newStatus); // ✅ debug log
+
+    const res = await fetch(
+      `https://taxation-backend.onrender.com/api/update-status/${id}`, // use same backend domain
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          newStatus,
+          createdby_type: role,
+          createdby_id: loginId,
+        }),
+      }
+    );
+
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`Failed: ${res.status} - ${text}`);
     }
-  };
 
-  const handleCreateReturn = async (e) => {
-    e.preventDefault();
-    
-    if (!can('create:return')) return;
-    
-    try {
-      const customer = customers.find(c => c.id === newReturn.customerId);
-      const returnData = {
-        ...newReturn,
-        id: Date.now().toString(),
-        customerName: customer?.name || '',
-        assignedReviewer: null,
-        reviewerId: null,
-        createdBy: user.id,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
+    addNotification("Status updated successfully", "success");
+    fetchAllReturns(); // refresh after update
+  } catch (err) {
+    console.error("Update error:", err);
+    addNotification("Failed to update status", "error");
+  }
+};
 
-      const updatedReturns = [...taxReturns, returnData];
-      setTaxReturns(updatedReturns);
-      updateTaxReturns(updatedReturns);
-
-      // Add activity
-      addActivity({
-        user: user.name,
-        action: `Created new ${returnData.type} return for ${customer?.name}`,
-        entityType: 'return',
-        entityId: returnData.id
-      });
-
-      await addNotification({
-        title: 'New Tax Return Created',
-        body: `${returnData.type} return created for ${customer?.name}`,
-        level: 'success',
-        relatedEntity: { type: 'return', id: returnData.id }
-      });
-
-      setNewReturn({
-        name: '',
-        customerId: '',
-        type: 'Federal',
-        status: 'Initial Request'
-      });
-      setShowCreateModal(false);
-    } catch (error) {
-      console.error('Error creating return:', error);
-    }
-  };
 
   const handleViewReturn = (taxReturn) => {
     setSelectedReturn(taxReturn);
     setShowDetailModal(true);
   };
 
-  const filteredReturns = selectedStatus === 'All' 
-    ? taxReturns 
-    : taxReturns.filter(r => r.status === selectedStatus);
+  // ✅ filter based on selected status
+  const filteredReturns =
+    selectedStatus === 'All'
+      ? taxReturns
+      : taxReturns.filter((r) => r.status === selectedStatus);
 
   if (isLoading) {
     return (
@@ -202,15 +157,6 @@ export default function TaxReturns() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Tax Returns</h1>
-        {can('create:return') && (
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors flex items-center"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Create Return
-          </button>
-        )}
       </div>
 
       {/* Filters */}
@@ -222,8 +168,10 @@ export default function TaxReturns() {
             onChange={(e) => setSelectedStatus(e.target.value)}
             className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
-            {statuses.map(status => (
-              <option key={status} value={status}>{status}</option>
+            {statuses.map((status) => (
+              <option key={status} value={status}>
+                {status}
+              </option>
             ))}
           </select>
           <span className="text-sm text-gray-600">
@@ -248,9 +196,6 @@ export default function TaxReturns() {
                   Status
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Assigned Reviewer
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Updated
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -265,75 +210,69 @@ export default function TaxReturns() {
                     <div className="flex items-center">
                       <FileText className="w-5 h-5 text-gray-400 mr-3" />
                       <div>
-                        <div className="text-sm font-medium text-gray-900">{taxReturn.name}</div>
-                        <div className="text-sm text-gray-500">{taxReturn.type}</div>
+                        <div className="text-sm font-medium text-gray-900">
+                          {taxReturn.name}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {taxReturn.return_type}
+                        </div>
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{taxReturn.customerName}</div>
+                    <div className="text-sm text-gray-900">{taxReturn.email}</div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {can('update_status:return') ? (
-                      <select
-                        value={taxReturn.status}
-                        onChange={(e) => handleStatusChange(taxReturn.id, e.target.value, taxReturn)}
-                        disabled={updatingStatus[taxReturn.id]}
-                        className={`text-xs px-2 py-1 rounded-full border-0 ${statusColors[taxReturn.status]} ${
-                          updatingStatus[taxReturn.id] ? 'opacity-50' : 'cursor-pointer'
-                        }`}
-                      >
-                        {statuses.slice(1).map(status => (
-                          <option key={status} value={status}>{status}</option>
-                        ))}
-                      </select>
-                    ) : (
-                      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${statusColors[taxReturn.status]}`}>
-                        {taxReturn.status}
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {taxReturn.assignedReviewer ? (
-                      <div className="flex items-center">
-                        <User className="w-4 h-4 text-gray-400 mr-2" />
-                        <span className="text-sm text-gray-900">{taxReturn.assignedReviewer}</span>
-                      </div>
-                    ) : (
-                      <span className="text-sm text-gray-500">Unassigned</span>
-                    )}
-                  </td>
+                  {/* <td className="px-6 py-4 whitespace-nowrap">
+                    <span
+                      className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                        statusColors[taxReturn.status] || 'bg-gray-100 text-gray-800'
+                      }`}
+                    >
+                      {taxReturn.status}
+                    </span>
+                    
+                    
+                  </td> */}
+           <select
+  value={taxReturn.status}
+  onChange={(e) => handleUpdateStatus(taxReturn.id, e.target.value)}
+  className={`text-xs px-2 py-1 rounded-full border-0 ${
+    statusColors[taxReturn.status] || 'bg-gray-100 text-gray-800'
+  }`}
+>
+  {statuses.slice(1).map((status) => ( // exclude "All"
+    <option key={status} value={status}>
+      {status}
+    </option>
+  ))}
+</select>
+
+
+
+
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <Clock className="w-4 h-4 text-gray-400 mr-2" />
-                      <span className="text-sm text-gray-900">{formatDate(taxReturn.updatedAt)}</span>
+                      <span className="text-sm text-gray-900">
+                        {new Date(taxReturn.modified_at).toLocaleDateString()}
+                      </span>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    <div className="flex items-center space-x-2">
-                      <button 
-                        onClick={() => handleViewReturn(taxReturn)}
-                        className="text-blue-600 hover:text-blue-700 transition-colors"
-                        title="View Details"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </button>
-                      {can('edit:return') && (
-                        <button 
-                          className="text-gray-600 hover:text-gray-700 transition-colors"
-                          title="Edit Return"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
+                    <button
+                      onClick={() => handleViewReturn(taxReturn)}
+                      className="text-blue-600 hover:text-blue-700 transition-colors flex items-center space-x-1"
+                    >
+                      <Eye className="w-4 h-4" />
+                      <span>View</span>
+                    </button>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-        
+
         {filteredReturns.length === 0 && (
           <div className="text-center py-12">
             <FileText className="mx-auto h-12 w-12 text-gray-400" />
@@ -348,81 +287,6 @@ export default function TaxReturns() {
           </div>
         )}
       </div>
-
-      {/* Create Return Modal */}
-      <Modal
-        isOpen={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
-        title="Create New Tax Return"
-      >
-        <form onSubmit={handleCreateReturn} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Return Name</label>
-            <input
-              type="text"
-              required
-              value={newReturn.name}
-              onChange={(e) => setNewReturn({ ...newReturn, name: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              placeholder="e.g., 2024 Federal Return"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Customer</label>
-            <select
-              required
-              value={newReturn.customerId}
-              onChange={(e) => setNewReturn({ ...newReturn, customerId: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="">Select Customer</option>
-              {customers.map(customer => (
-                <option key={customer.id} value={customer.id}>{customer.name}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
-            <select
-              value={newReturn.type}
-              onChange={(e) => setNewReturn({ ...newReturn, type: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="Federal">Federal</option>
-              <option value="State">State</option>
-              <option value="Quarterly">Quarterly</option>
-              <option value="Amendment">Amendment</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Initial Status</label>
-            <select
-              value={newReturn.status}
-              onChange={(e) => setNewReturn({ ...newReturn, status: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              {statuses.slice(1).map(status => (
-                <option key={status} value={status}>{status}</option>
-              ))}
-            </select>
-          </div>
-          <div className="flex space-x-3 pt-4">
-            <button
-              type="submit"
-              className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors"
-            >
-              Create Return
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowCreateModal(false)}
-              className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-400 transition-colors"
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
-      </Modal>
 
       {/* Return Detail Modal */}
       <Modal
@@ -439,36 +303,37 @@ export default function TaxReturns() {
                 <p className="text-sm text-gray-900 mt-1">{selectedReturn.name}</p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Customer</label>
-                <p className="text-sm text-gray-900 mt-1">{selectedReturn.customerName}</p>
+                <label className="block text-sm font-medium text-gray-700">Email</label>
+                <p className="text-sm text-gray-900 mt-1">{selectedReturn.email}</p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Type</label>
-                <p className="text-sm text-gray-900 mt-1">{selectedReturn.type}</p>
+                <p className="text-sm text-gray-900 mt-1">{selectedReturn.return_type}</p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Status</label>
-                <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full mt-1 ${statusColors[selectedReturn.status]}`}>
+                <span
+                  className={`inline-flex px-2 py-1 text-xs font-medium rounded-full mt-1 ${
+                    statusColors[selectedReturn.status] || 'bg-gray-100 text-gray-800'
+                  }`}
+                >
                   {selectedReturn.status}
                 </span>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Assigned Reviewer</label>
-                <p className="text-sm text-gray-900 mt-1">{selectedReturn.assignedReviewer || 'Unassigned'}</p>
+                <label className="block text-sm font-medium text-gray-700">Created At</label>
+                <p className="text-sm text-gray-900 mt-1">
+                  {new Date(selectedReturn.created_at).toLocaleString()}
+                </p>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Last Updated</label>
-                <p className="text-sm text-gray-900 mt-1">{formatDate(selectedReturn.updatedAt)}</p>
-              </div>
-            </div>
-
-            <div className="border-t pt-4">
+              <div className="border-t pt-4">
               <Link
-                to={`/customers/${selectedReturn.customerId}`}
+                to={`/customers/${selectedReturn.id}`}
                 className="text-blue-600 hover:text-blue-700 transition-colors text-sm"
               >
                 View Customer Profile →
               </Link>
+            </div>
             </div>
           </div>
         )}
@@ -476,7 +341,6 @@ export default function TaxReturns() {
     </div>
   );
 }
-
 
 
 

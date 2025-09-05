@@ -7,6 +7,7 @@ import { useNotifications } from '../contexts/NotificationsContext.jsx';
 import { customersAPI } from '../api/customers.js';
 import { Search, Plus, Edit, Trash2, FileText, Eye, Users } from 'lucide-react';
 import Modal from '../components/Modal.jsx';
+import {BASE_URL} from '../api/BaseUrl.js';
 
 export default function Customers() {
   const { user } = useAuth();
@@ -30,24 +31,67 @@ export default function Customers() {
     loadCustomers();
   }, [contextCustomers]);
 
-  const loadCustomers = async () => {
-    try {
-      setIsLoading(true);
-      let allCustomers = await customersAPI.getAll();
+  // const loadCustomers = async () => {
+  //   try {
+  //     setIsLoading(true);
+  //     // let allCustomers = await customersAPI.getAll();
       
-      // Filter for clients - they can only see their own data
-      if (user?.role === 'client') {
-        allCustomers = allCustomers.filter(c => c.ownerId === user.id);
-      }
-      
-      setCustomers(allCustomers);
-    } catch (error) {
-      console.error('Error loading customers:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  //     let allCustomers = await customersAPI( 'http://192.168.1.5:3000/api/allCustomers');
 
+  //     console.log(allCustomers, 'this is customers api ')
+
+      
+ 
+  //     // Filter for clients - they can only see their own data
+  //     if (user?.role === 'client') {
+  //       allCustomers = allCustomers.filter(c => c.ownerId === user.id);
+  //     }
+      
+  //     setCustomers(allCustomers);
+  //   } catch (error) {
+  //     console.error('Error loading customers:', error);
+  //   } finally {
+  //     setIsLoading(false);
+  //   }
+  // };
+
+
+  const loadCustomers = async () => {
+  try {
+    setIsLoading(true);
+    // Fetch customers from the new API endpoint
+    const response = await fetch(`${BASE_URL}/api/allCustomers`);
+    const data = await response.json();
+    
+    let allCustomers = data.users.map(user => ({
+      id: user.customerId || '',  // Math.random().toString(36).substr(2, 9), // Generate a random ID if not provided
+      name: user.customerName,
+      email: user.customerEmail,
+      mobile: user.customerPhone || '',
+      documentsCount: user.totalDocuments || 0,
+      returnsCount: user.totalReturns || 0,
+      status: user.taxReturnStatus || 'No Return',
+      taxReturnId: user.taxReturnId || null,
+      taxReturnName: user.taxReturnName || null,
+      returnType: user.returnType || null,
+      statusLog: user.statusLog || [],
+      createdAt: user.createdAt || new Date().toISOString(),
+      modifiedAt: user.modifiedAt || new Date().toISOString()
+    }));
+    
+    console.log(allCustomers ,' this is customer')
+    // Filter for clients - they can only see their own data
+    if (user?.role === 'client') {
+      allCustomers = allCustomers.filter(c => c.ownerId === user.id);
+    }
+    
+    setCustomers(allCustomers);
+  } catch (error) {
+    console.error('Error loading customers:', error);
+  } finally {
+    setIsLoading(false);
+  }
+};
   const handleStatusChange = async (customerId, newStatus, customerName) => {
     try {
       setEditingStatus({ ...editingStatus, [customerId]: true });
