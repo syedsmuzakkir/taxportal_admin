@@ -1,6 +1,8 @@
 // import { getData } from '../seedData.js';
 // import { simulateNetwork } from './utils.js';
 
+import { BASE_URL } from "./BaseUrl";
+
 // export const authAPI = {
 //   async login(email, password) {
 //     await simulateNetwork(800);
@@ -33,7 +35,7 @@
 export const authAPI = {
   async login(email, password) {
     try {
-      const response = await fetch('https://taxation-backend.onrender.com/api/admin/login', {
+      const response = await fetch(`${BASE_URL}/api/admin/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -56,7 +58,7 @@ export const authAPI = {
 
   async verifyOTP(email, otp) {
     try {
-      const response = await fetch('https://taxation-backend.onrender.com/api/admin/verify-otp', {
+      const response = await fetch(`${BASE_URL}/api/admin/verify-otp`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
