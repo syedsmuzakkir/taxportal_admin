@@ -22,9 +22,10 @@ export default function Customers() {
   const [newCustomer, setNewCustomer] = useState({
     name: '',
     email: '',
-    mobile: '',
-    ssn: '',
-    status: 'Active'
+   
+    password: '',
+  phone: '',
+  role: 'individual',
   });
 
   useEffect(() => {
@@ -125,47 +126,116 @@ export default function Customers() {
     }
   };
 
-  const handleCreateCustomer = async (e) => {
-    e.preventDefault();
+  // const handleCreateCustomer = async (e) => {
+  //   e.preventDefault();
     
-    try {
-      const customerData = {
-        ...newCustomer,
-        ownerId: user.role === 'client' ? user.id : null
-      };
+  //   try {
+  //     const customerData = {
+  //       ...newCustomer,
+  //       ownerId: user.role === 'client' ? user.id : null
+  //     };
 
-      const createdCustomer = await customersAPI.create(customerData);
-      const updatedCustomers = [...customers, createdCustomer];
-      setCustomers(updatedCustomers);
-      updateCustomers(updatedCustomers);
+  //     const createdCustomer = await customersAPI.create(customerData);
+  //     const updatedCustomers = [...customers, createdCustomer];
+  //     setCustomers(updatedCustomers);
+  //     updateCustomers(updatedCustomers);
 
-      // Add activity
-      addActivity({
-        user: user.name,
-        action: `Created new customer ${createdCustomer.name}`,
-        entityType: 'customer',
-        entityId: createdCustomer.id
-      });
+  //     // Add activity
+  //     addActivity({
+  //       user: user.name,
+  //       action: `Created new customer ${createdCustomer.name}`,
+  //       entityType: 'customer',
+  //       entityId: createdCustomer.id
+  //     });
 
-      await addNotification({
-        title: 'New Customer Created',
-        body: `${createdCustomer.name} has been added to the system`,
-        level: 'success',
-        relatedEntity: { type: 'customer', id: createdCustomer.id }
-      });
+  //     await addNotification({
+  //       title: 'New Customer Created',
+  //       body: `${createdCustomer.name} has been added to the system`,
+  //       level: 'success',
+  //       relatedEntity: { type: 'customer', id: createdCustomer.id }
+  //     });
 
-      setNewCustomer({
-        name: '',
-        email: '',
-        mobile: '',
-        ssn: '',
-        status: 'Active'
-      });
-      setShowCreateModal(false);
-    } catch (error) {
-      console.error('Error creating customer:', error);
+  //     setNewCustomer({
+  //       name: '',
+  //       email: '',
+  //       mobile: '',
+  //       ssn: '',
+  //       status: 'Active'
+  //     });
+  //     setShowCreateModal(false);
+  //   } catch (error) {
+  //     console.error('Error creating customer:', error);
+  //   }
+  // };
+
+
+ const handleCreateCustomer = async (e) => {
+  e.preventDefault();
+
+  try {
+    const payload = {
+      name: newCustomer.name,
+      email: newCustomer.email,
+      password: newCustomer.password,
+      role: newCustomer.role,
+      phone: newCustomer.mobile,
+    };
+
+    const response = await fetch("https://taxation-backend.onrender.com/api/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await response.json(); // 👈 always parse response
+
+    if (!response.ok) {
+      // Backend sends { "error": "..." }
+      throw new Error(data.error || "Registration failed");
     }
-  };
+
+    // Success flow
+    const createdCustomer = data;
+
+    const updatedCustomers = [...customers, createdCustomer];
+    setCustomers(updatedCustomers);
+    updateCustomers(updatedCustomers);
+
+    addActivity({
+      user: user.name,
+      action: `Created new customer ${createdCustomer.name}`,
+      entityType: "customer",
+      entityId: createdCustomer.id,
+    });
+
+    await addNotification({
+      title: "New Customer Created",
+      body: `${createdCustomer.user.name} has been added to the system`,
+      level: "success",
+      relatedEntity: { type: "customer", id: createdCustomer.id },
+    });
+
+    setNewCustomer({
+      name: "",
+      email: "",
+      password: "",
+      mobile: "",
+      role: "individual",
+    });
+    setShowCreateModal(false);
+
+  } catch (error) {
+    console.error("Error creating customer:", error.message);
+
+    // Show backend error in your app
+    await addNotification({
+      title: "Customer Creation Failed",
+      body: error.message, // 👈 will show "Email already registered."
+      level: "error",
+    });
+  }
+};
+
 
   const handleDeleteCustomer = async (customerId, customerName) => {
     if (window.confirm(`Are you sure you want to delete ${customerName}?`)) {
@@ -196,11 +266,15 @@ export default function Customers() {
     }
   };
 
-  const filteredCustomers = customers.filter(customer =>
-    customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    customer.email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // const filteredCustomers = customers.filter(customer =>
+  //   customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  //   customer.email.toLowerCase().includes(searchTerm.toLowerCase())
+  // );
 
+  const filteredCustomers = customers.filter(customer =>
+  (customer?.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+  (customer?.email?.toLowerCase() || '').includes(searchTerm.toLowerCase())
+);
   const getStatusColor = (status) => {
     switch (status) {
       case 'Active': return 'bg-green-100 text-green-800';
@@ -354,85 +428,86 @@ export default function Customers() {
       </div>
 
       {/* Create Customer Modal */}
-      <Modal
-        isOpen={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
-        title="Create New Customer"
+     
+     <Modal
+  isOpen={showCreateModal}
+  onClose={() => setShowCreateModal(false)}
+  title="Create New Customer"
+>
+  <form onSubmit={handleCreateCustomer} className="space-y-4">
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
+      <input
+        type="text"
+        required
+        value={newCustomer.name}
+        onChange={(e) => setNewCustomer({ ...newCustomer, name: e.target.value })}
+        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        placeholder="Enter customer name"
+      />
+    </div>
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+      <input
+        type="email"
+        required
+        value={newCustomer.email}
+        onChange={(e) => setNewCustomer({ ...newCustomer, email: e.target.value })}
+        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        placeholder="Enter email address"
+      />
+    </div>
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
+      <input
+        type="password"
+        required
+        value={newCustomer.password}
+        onChange={(e) => setNewCustomer({ ...newCustomer, password: e.target.value })}
+        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        placeholder="Enter password"
+      />
+    </div>
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-2">Phone</label>
+      <input
+        type="tel"
+        required
+        value={newCustomer.phone}
+        onChange={(e) => setNewCustomer({ ...newCustomer, phone: e.target.value })}
+        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        placeholder="+1-555-0123"
+      />
+    </div>
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-2">Role</label>
+      <select
+        value={newCustomer.role}
+        onChange={(e) => setNewCustomer({ ...newCustomer, role: e.target.value })}
+        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
       >
-        <form onSubmit={handleCreateCustomer} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
-            <input
-              type="text"
-              required
-              value={newCustomer.name}
-              onChange={(e) => setNewCustomer({ ...newCustomer, name: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Enter customer name"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
-            <input
-              type="email"
-              required
-              value={newCustomer.email}
-              onChange={(e) => setNewCustomer({ ...newCustomer, email: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Enter email address"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Mobile</label>
-            <input
-              type="tel"
-              required
-              value={newCustomer.mobile}
-              onChange={(e) => setNewCustomer({ ...newCustomer, mobile: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              placeholder="+1-555-0123"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">SSN</label>
-            <input
-              type="text"
-              required
-              value={newCustomer.ssn}
-              onChange={(e) => setNewCustomer({ ...newCustomer, ssn: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              placeholder="***-**-1234"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
-            <select
-              value={newCustomer.status}
-              onChange={(e) => setNewCustomer({ ...newCustomer, status: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="Active">Active</option>
-              <option value="Pending">Pending</option>
-              <option value="Inactive">Inactive</option>
-            </select>
-          </div>
-          <div className="flex space-x-3 pt-4">
-            <button
-              type="submit"
-              className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors"
-            >
-              Create Customer
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowCreateModal(false)}
-              className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-400 transition-colors"
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
-      </Modal>
+        <option value="individual">Individual</option>
+        <option value="business">Business</option>
+      </select>
+    </div>
+    <div className="flex space-x-3 pt-4">
+      <button
+        type="submit"
+        className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors"
+      >
+        Create Customer
+      </button>
+      <button
+        type="button"
+        onClick={() => setShowCreateModal(false)}
+        className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-400 transition-colors"
+      >
+        Cancel
+      </button>
+    </div>
+  </form>
+</Modal>
+
     </div>
   );
 }

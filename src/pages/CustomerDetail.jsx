@@ -862,7 +862,8 @@
 
 
 
-import { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
+
 import { useParams } from "react-router-dom";
 import {
   ArrowLeft,
@@ -937,7 +938,13 @@ export default function CustomerDetail() {
       try {
         setIsLoading(true);
         const response = await fetch(`${BASE_URL}/api/tax-returns/${id}`);
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        // if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        if (!response.ok) {
+        // Always show "No documents found" for non-200
+        setError("No documents found");
+        setTaxReturns([]);
+        return;
+      }
         const data = await response.json();
         setTaxReturns(data);
       } catch (err) {
@@ -1102,6 +1109,55 @@ export default function CustomerDetail() {
     details: `Return type: ${returnItem.return_type}. Status: ${returnItem.status}`,
   }));
 
+
+
+
+  const downloadDocument = useCallback(async (doc) => {
+
+    console.log(doc)
+  try {
+    if (!doc.document_link) {
+      alert("Document link not available");
+      return;
+    }
+
+    // Clean up the document link path - handle both forward and backward slashes
+    const cleanPath = doc.document_link.replace(/\\/g, "/");
+    const fileName = doc.doc_name || cleanPath.split("/").pop() || "document";
+
+    // Use the backend download endpoint
+    const downloadUrl = `${BASE_URL}/api/download?documentLink=${encodeURIComponent(doc.document_link)}`;
+    console.log("Download URL:", downloadUrl);
+
+    // Create a fetch request to get the file
+    const response = await fetch(downloadUrl);
+
+    if (!response.ok) {
+      throw new Error(`Download failed: ${response.status}`);
+    }
+
+    // Create blob from response
+    const blob = await response.blob();
+
+    // Create download link
+    const url = window.URL.createObjectURL(blob);
+    const link = window.document.createElement("a"); // ✅ use global document
+    link.href = url;
+    link.download = fileName;
+    window.document.body.appendChild(link);
+    link.click();
+
+    // Cleanup
+    window.document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error("Error downloading document:", error);
+    alert("Failed to download document. Please try again.");
+  }
+}, []);
+
+
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -1117,6 +1173,10 @@ export default function CustomerDetail() {
       </div>
     );
   }
+
+
+
+
 
   return (
     <main className="mx-auto max-w-6xl space-y-6 p-4 md:p-6">
@@ -1223,7 +1283,7 @@ export default function CustomerDetail() {
                                 key={d.id}
                                 className="group relative flex h-16 w-24 shrink-0 cursor-pointer items-center justify-center rounded-md border border-gray-200 bg-gray-50 hover:bg-gray-100"
                                 title={d.doc_name}
-                                onClick={() => alert(`Preview ${d.doc_name}`)}
+                                onClick={() => downloadDocument(d)}
                               >
                                 <DocIcon
                                   type={d.doc_type}
@@ -1249,8 +1309,10 @@ export default function CustomerDetail() {
                                     className="rounded bg-white/90 p-1 hover:bg-white"
                                     aria-label="Download"
                                     onClick={(e) => {
-                                      e.stopPropagation();
-                                      alert(`Downloading ${d.doc_name}`);
+                                      // e.stopPropagation();
+                                      // alert(`Downloading ${d.doc_name}`);
+                                      downloadDocument(d)
+
                                     }}
                                   >
                                     <Download className="h-3.5 w-3.5 text-gray-700" />

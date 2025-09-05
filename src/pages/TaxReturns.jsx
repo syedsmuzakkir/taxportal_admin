@@ -259,13 +259,18 @@ const handleUpdateStatus = async (id, newStatus) => {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    <button
+                    {/* <button
                       onClick={() => handleViewReturn(taxReturn)}
                       className="text-blue-600 hover:text-blue-700 transition-colors flex items-center space-x-1"
-                    >
+                    > */}
+                    <Link
+                to={`/customers/${taxReturn.id}`}
+                className="text-blue-600 hover:text-blue-700 transition-colors text-sm"
+              >
                       <Eye className="w-4 h-4" />
                       <span>View</span>
-                    </button>
+                      </Link>
+                    {/* </button> */}
                   </td>
                 </tr>
               ))}
@@ -289,7 +294,7 @@ const handleUpdateStatus = async (id, newStatus) => {
       </div>
 
       {/* Return Detail Modal */}
-      <Modal
+      {/* <Modal
         isOpen={showDetailModal}
         onClose={() => setShowDetailModal(false)}
         title={selectedReturn ? `${selectedReturn.name} - Details` : 'Return Details'}
@@ -337,7 +342,7 @@ const handleUpdateStatus = async (id, newStatus) => {
             </div>
           </div>
         )}
-      </Modal>
+      </Modal> */}
     </div>
   );
 }
