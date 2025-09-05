@@ -1,3 +1,5 @@
+"use client"
+
 import { useState, useRef, useEffect, useCallback } from "react"
 
 import { useParams } from "react-router-dom"
@@ -65,6 +67,7 @@ export default function CustomerDetail() {
   const [newComment, setNewComment] = useState("")
   const [composerAttachments, setComposerAttachments] = useState([])
   const [timeline, setTimeline] = useState([])
+  const [saved , setSaved] = useState(false)
 
   const loginId = localStorage.getItem("loginId")
   const role = localStorage.getItem("role")
@@ -78,7 +81,7 @@ export default function CustomerDetail() {
         // if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         if (!response.ok) {
           // Always show "No documents found" for non-200
-          setError("No Returns found")
+          setError("No documents found")
           setTaxReturns([])
           return
         }
@@ -133,6 +136,7 @@ export default function CustomerDetail() {
   }, [openReturnId])
 
   const handleAddPricing = async () => {
+    setSaved(true)
     try {
       const res = await fetch(`${BASE_URL}/api/add-pricing`, {
         method: "POST",
@@ -146,6 +150,7 @@ export default function CustomerDetail() {
           created_by_id: loginId,
         }),
       })
+      setSaved(false)
 
       const data = await res.json()
       console.log("Pricing added:", data)
@@ -276,6 +281,8 @@ export default function CustomerDetail() {
   const returns = taxReturns.map((returnItem) => ({
     id: returnItem.id.toString(),
     name: `${returnItem.return_type}`,
+    price: returnItem.price || "",
+    pricing_type: returnItem.pricing_type || "hourly",
     type: returnItem.createdby_type || " ",
     status: returnItem.status || "In Progress",
     updatedAt: returnItem.modified_at || new Date().toISOString(),
@@ -283,7 +290,6 @@ export default function CustomerDetail() {
   }))
 
   const downloadDocument = useCallback(async (doc) => {
-    console.log(doc)
     try {
       if (!doc.document_link) {
         alert("Document link not available")
@@ -296,7 +302,6 @@ export default function CustomerDetail() {
 
       // Use the backend download endpoint
       const downloadUrl = `${BASE_URL}/api/download?documentLink=${encodeURIComponent(doc.document_link)}`
-      console.log("Download URL:", downloadUrl)
 
       // Create a fetch request to get the file
       const response = await fetch(downloadUrl)
@@ -336,7 +341,7 @@ export default function CustomerDetail() {
   if (error) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-gray-600">{error}</div>
+        <div className="text-gray-600"> {error}</div>
       </div>
     )
   }
@@ -371,7 +376,13 @@ export default function CustomerDetail() {
                   <div className="flex items-center gap-3">
                     <button
                       className="rounded p-1 hover:bg-gray-100"
-                      onClick={() => setOpenReturnId(isOpen ? null : r.id)}
+                      onClick={() => {
+                        setOpenReturnId(isOpen ? null : r.id)
+                        if (!isOpen) {
+                          setPrice(r.price || "")
+                          setPricingType(r.pricing_type || "hourly")
+                        }
+                      }}
                       aria-label={isOpen ? "Hide details" : "Show details"}
                     >
                       {isOpen ? (
@@ -390,6 +401,10 @@ export default function CustomerDetail() {
                       onClick={() => {
                         setOpenReturnId(isOpen ? null : r.id)
                         setCategory(r.name)
+                        if (!isOpen) {
+                          setPrice(r.price || "")
+                          setPricingType(r.pricing_type || "hourly")
+                        }
                       }}
                     >
                       show details
@@ -420,6 +435,14 @@ export default function CustomerDetail() {
                             <div>
                               <div className="text-gray-500">Status</div>
                               <StatusPill status={r.status} />
+                            </div>
+                            <div>
+                              <div className="text-gray-500">Price</div>
+                              <div className="font-medium text-gray-900">${r.price}</div>
+                            </div>
+                            <div>
+                              <div className="text-gray-500">Pricing Type</div>
+                              <div className="font-medium text-gray-900">{r.pricing_type}</div>
                             </div>
                           </div>
                         </div>
@@ -453,8 +476,6 @@ export default function CustomerDetail() {
                                     className="rounded bg-white/90 p-1 hover:bg-white"
                                     aria-label="Download"
                                     onClick={(e) => {
-                                      // e.stopPropagation();
-                                      // alert(`Downloading ${d.doc_name}`);
                                       downloadDocument(d)
                                     }}
                                   >
@@ -491,6 +512,7 @@ export default function CustomerDetail() {
                           type="number"
                           value={price}
                           onChange={(e) => setPrice(e.target.value)}
+                          placeholder="Enter price amount"
                           className="mb-4 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
                         />
 
@@ -498,7 +520,7 @@ export default function CustomerDetail() {
                           className="w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
                           onClick={handleAddPricing}
                         >
-                          Save Pricing
+                          {!saved ? 'save pricings' : 'Saving..'}
                         </button>
                       </aside>
 
