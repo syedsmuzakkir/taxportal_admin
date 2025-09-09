@@ -137,7 +137,6 @@
 //   return context;
 // }
 
-
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import { authAPI } from '../api/auth.js';
 
@@ -150,7 +149,8 @@ const initialState = {
   requiresOTP: false,
   otpValidated: false,
   isLoading: true,
-  loginEmail: null
+  loginEmail: null,
+  loginPassword: null // Add password storage
 };
 
 function authReducer(state, action) {
@@ -161,7 +161,8 @@ function authReducer(state, action) {
       return { 
         ...state, 
         requiresOTP: true,
-        loginEmail: action.payload,
+        loginEmail: action.payload.email,
+        loginPassword: action.payload.password, // Store password
         isLoading: false 
       };
     case 'OTP_SUCCESS':
@@ -172,6 +173,7 @@ function authReducer(state, action) {
         isAuthenticated: true,
         otpValidated: true,
         requiresOTP: false,
+        loginPassword: null, // Clear password after success
         isLoading: false 
       };
     case 'LOGOUT':
@@ -220,7 +222,7 @@ export function AuthProvider({ children }) {
       const result = await authAPI.login(email, password);
       
       if (result.success) {
-        dispatch({ type: 'LOGIN_SUCCESS', payload: email });
+        dispatch({ type: 'LOGIN_SUCCESS', payload: { email, password } });
         return { success: true, message: result.message };
       }
     } catch (error) {
@@ -251,6 +253,19 @@ export function AuthProvider({ children }) {
     }
   };
 
+  const resendOTP = async () => {
+    try {
+      if (!state.loginEmail || !state.loginPassword) {
+        throw new Error('No login credentials available');
+      }
+      
+      const result = await authAPI.login(state.loginEmail, state.loginPassword);
+      return { success: true, message: result.message };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  };
+
   const logout = () => {
     localStorage.removeItem('userSession');
     dispatch({ type: 'LOGOUT' });
@@ -260,7 +275,8 @@ export function AuthProvider({ children }) {
     ...state,
     login,
     logout,
-    verifyOTP
+    verifyOTP,
+    resendOTP
   };
 
   return (

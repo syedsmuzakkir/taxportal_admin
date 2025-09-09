@@ -65,8 +65,17 @@ function App() {
                       </ProtectedRoute>
                     } 
                   />
+                  {/* Tax Returns Routes */}
                   <Route 
                     path="tax-returns" 
+                    element={
+                      <ProtectedRoute permission="page:tax_returns">
+                        <TaxReturns />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  <Route 
+                    path="tax-returns/status/:status" 
                     element={
                       <ProtectedRoute permission="page:tax_returns">
                         <TaxReturns />

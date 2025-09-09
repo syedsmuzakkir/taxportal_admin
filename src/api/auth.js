@@ -45,7 +45,7 @@ export const authAPI = {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Login failed');
+        throw new Error(errorData.error || 'Login failed');
       }
 
       // The login API should return a success message indicating OTP was sent
@@ -68,7 +68,7 @@ export const authAPI = {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'OTP verification failed');
+        throw new Error(errorData.error || 'OTP verification failed');
       }
 
       const data = await response.json();
@@ -87,4 +87,7 @@ export const authAPI = {
       throw new Error(error.message || 'OTP verification failed');
     }
   }
+
+
+  
 };
