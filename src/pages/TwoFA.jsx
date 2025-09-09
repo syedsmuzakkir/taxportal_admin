@@ -142,17 +142,35 @@ import { useAuth } from '../contexts/AuthContext.jsx';
 import { FileText, RotateCcw } from 'lucide-react';
 
 export default function TwoFA() {
-  const { user, verifyOTP, otpValidated, isAuthenticated, loginEmail, isLoading } = useAuth();
+  const { user, verifyOTP, otpValidated, isAuthenticated, loginEmail, isLoading, resendOTP } = useAuth();
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState('');
+  const [resendTimer, setResendTimer] = useState(0);
+  const [isResending, setIsResending] = useState(false);
 
   useEffect(() => {
     if (loginEmail) {
       setMessage(`We've sent a 6-digit code to ${loginEmail}`);
+      // Start the resend timer when component mounts
+      startResendTimer();
     }
   }, [loginEmail]);
+
+  useEffect(() => {
+    let interval;
+    if (resendTimer > 0) {
+      interval = setInterval(() => {
+        setResendTimer(prev => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [resendTimer]);
+
+  const startResendTimer = () => {
+    setResendTimer(30); // 30 seconds cooldown
+  };
 
   if (!isAuthenticated && !loginEmail) {
     return <Navigate to="/login" replace />;
@@ -179,10 +197,25 @@ export default function TwoFA() {
     }
   };
 
-  const handleResend = () => {
-    // You might need to implement a resend OTP API call here
+  const handleResend = async () => {
+    if (resendTimer > 0 || isResending) return;
+    
+    setIsResending(true);
     setError('');
-    setMessage('A new code has been sent to your email.');
+    
+    try {
+      const result = await resendOTP();
+      if (result.success) {
+        setMessage(`A new code has been sent to ${loginEmail}`);
+        startResendTimer();
+      } else {
+        setError('Failed to resend code. Please try again.');
+      }
+    } catch (err) {
+      setError('Failed to resend code. Please try again.');
+    } finally {
+      setIsResending(false);
+    }
   };
 
   const handleCodeChange = (e) => {
@@ -204,7 +237,12 @@ export default function TwoFA() {
         <div className="bg-white rounded-lg shadow-lg p-8">
           <div className="text-center mb-8">
             <div className="mx-auto w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center mb-4">
-              <FileText className="w-8 h-8 text-white" />
+              {/* <FileText className="w-8 h-8 text-white" /> */}
+                   <img src="../../src/images/favicon.svg" 
+  className="w-8 h-8" 
+  alt="TaxPortal Icon"
+  style={{ objectFit: 'contain' }}
+/>
             </div>
             <h1 className="text-2xl font-bold text-gray-900">Two-Factor Authentication</h1>
             <p className="text-gray-600 mt-2">
@@ -247,10 +285,13 @@ export default function TwoFA() {
           <div className="mt-6 text-center">
             <button
               onClick={handleResend}
-              className="text-blue-600 hover:text-blue-700 text-sm font-medium transition-colors flex items-center justify-center mx-auto"
+              disabled={resendTimer > 0 || isResending}
+              className="text-blue-600 hover:text-blue-700 disabled:text-gray-400 disabled:hover:text-gray-400 disabled:cursor-not-allowed text-sm font-medium transition-colors flex items-center justify-center mx-auto"
             >
               <RotateCcw className="w-4 h-4 mr-2" />
-              Resend verification code
+              {isResending ? 'Sending...' : 
+               resendTimer > 0 ? `Resend in ${resendTimer}s` : 
+               'Resend verification code'}
             </button>
           </div>
 

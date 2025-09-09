@@ -1,31 +1,29 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { useData } from '../contexts/DataContext.jsx';
-import { useAuth } from '../contexts/AuthContext.jsx';
-import { usePermissions } from '../contexts/PermissionsContext.jsx';
-import { useNotifications } from '../contexts/NotificationsContext.jsx';
-import { Filter, FileText, User, Clock, Edit, Eye, Plus } from 'lucide-react';
-import { formatDate } from '../utils/dateUtils.js';
-import Modal from '../components/Modal.jsx';
-import { BASE_URL } from '../api/BaseUrl.js';
+import React, { useState, useEffect } from "react";
+import { Link, useLocation } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext.jsx";
+import { usePermissions } from "../contexts/PermissionsContext.jsx";
+import { useNotifications } from "../contexts/NotificationsContext.jsx";
+import { Filter, FileText, Clock, Eye } from "lucide-react";
+import Modal from "../components/Modal.jsx";
+import { BASE_URL } from "../api/BaseUrl.js";
 
 const statuses = [
-  'All',
-  'Initial Request',
-  'Document Verified',
-  'In Preparation',
-  'In Review',
-  'Ready to File',
-  'Filed Return'
+  "All",
+  "Initial Request",
+  "Document Verified",
+  "In Preparation",
+  "In Review",
+  "Ready to File",
+  "Filed Return",
 ];
 
 const statusColors = {
-  'Initial Request': 'bg-gray-100 text-gray-800',
-  'Document Verified': 'bg-blue-100 text-blue-800',
-  'In Preparation': 'bg-yellow-100 text-yellow-800',
-  'In Review': 'bg-orange-100 text-orange-800',
-  'Ready to File': 'bg-purple-100 text-purple-800',
-  'Filed Return': 'bg-green-100 text-green-800'
+  "Initial Request": "bg-gray-100 text-gray-800",
+  "Document Verified": "bg-blue-100 text-blue-800",
+  "In Preparation": "bg-yellow-100 text-yellow-800",
+  "In Review": "bg-orange-100 text-orange-800",
+  "Ready to File": "bg-purple-100 text-purple-800",
+  "Filed Return": "bg-green-100 text-green-800",
 };
 
 export default function TaxReturns() {
@@ -35,14 +33,18 @@ export default function TaxReturns() {
   const location = useLocation();
 
   const [taxReturns, setTaxReturns] = useState([]);
-  const [selectedStatus, setSelectedStatus] = useState('All');
+  const [selectedStatus, setSelectedStatus] = useState("All");
   const [isLoading, setIsLoading] = useState(true);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedReturn, setSelectedReturn] = useState(null);
 
+  const loginId = localStorage.getItem("loginId");
+  const role = localStorage.getItem("role");
+
+  // ✅ Parse ?status= query param
   useEffect(() => {
     const queryParams = new URLSearchParams(location.search);
-    const statusParam = queryParams.get('status');
+    const statusParam = queryParams.get("status");
     if (statusParam && statuses.includes(statusParam)) {
       setSelectedStatus(statusParam);
     }
@@ -58,7 +60,6 @@ export default function TaxReturns() {
       const res = await fetch(`${BASE_URL}/api/get-all-returns`);
       const result = await res.json();
 
-      // ✅ set only the array of returns
       setTaxReturns(result.data || []);
       console.log("Fetched Returns:", result.data);
     } catch (error) {
@@ -68,49 +69,11 @@ export default function TaxReturns() {
     }
   };
 
-  const loginId = localStorage.getItem("loginId");
-  const role = localStorage.getItem("role");
+  const handleUpdateStatus = async (id, newStatus) => {
+    try {
+      console.log("Updating status:", id, newStatus);
 
-  // const handleUpdateStatus = async (newStatus) => {
-  //   if (!selectedReturn) return;
-
-  //   try {
-  //     setUpdating(true);
-  //     const res = await fetch(
-  //       `https://2aa85db8069364de8ca5fae1fd182421.serveo.net/api/update-status/${selectedReturn.id}`,
-  //       {
-  //         method: "PUT",
-  //         headers: { "Content-Type": "application/json" },
-  //         body: JSON.stringify({
-  //           newStatus,
-  //           createdby_type: role,
-  //           createdby_id: loginId
-  //         })
-  //       }
-  //     );
-
-  //     // if (!res.ok) throw new Error("Failed to update status");
-
-  //     addNotification("Status updated successfully", "success");
-
-  //     // ✅ refresh list
-  //     fetchAllReturns();
-  //     setShowDetailModal(false);
-  //   } catch (err) {
-  //     console.error("Update error:", err);
-  //     addNotification("Failed to update status", "error");
-  //   } finally {
-  //     setUpdating(false);
-  //   }
-  // };
-
-const handleUpdateStatus = async (id, newStatus) => {
-  try {
-    console.log("Updating status:", id, newStatus); // ✅ debug log
-
-    const res = await fetch(
-      `${BASE_URL}/api/update-status/${id}`, // use same backend domain
-      {
+      const res = await fetch(`${BASE_URL}/api/update-status/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -118,33 +81,33 @@ const handleUpdateStatus = async (id, newStatus) => {
           createdby_type: role,
           createdby_id: loginId,
         }),
+      });
+
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`Failed: ${res.status} - ${text}`);
       }
-    );
 
-    if (!res.ok) {
-      const text = await res.text();
-      throw new Error(`Failed: ${res.status} - ${text}`);
+      addNotification("Status updated successfully", "success");
+      fetchAllReturns();
+    } catch (err) {
+      console.error("Update error:", err);
+      addNotification("Failed to update status", "error");
     }
-
-    addNotification("Status updated successfully", "success");
-    fetchAllReturns(); // refresh after update
-  } catch (err) {
-    console.error("Update error:", err);
-    addNotification("Failed to update status", "error");
-  }
-};
-
+  };
 
   const handleViewReturn = (taxReturn) => {
     setSelectedReturn(taxReturn);
     setShowDetailModal(true);
   };
 
-  // ✅ filter based on selected status
+  // ✅ Case-insensitive filter
   const filteredReturns =
-    selectedStatus === 'All'
+    selectedStatus === "All"
       ? taxReturns
-      : taxReturns.filter((r) => r.status === selectedStatus);
+      : taxReturns.filter(
+          (r) => r.status?.toLowerCase() === selectedStatus.toLowerCase()
+        );
 
   if (isLoading) {
     return (
@@ -206,9 +169,10 @@ const handleUpdateStatus = async (id, newStatus) => {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredReturns.map((taxReturn) => (
-                
-                <tr key={taxReturn.id} className="hover:bg-gray-50 transition-colors">
-                  {console.log(taxReturn)}
+                <tr
+                  key={taxReturn.id}
+                  className="hover:bg-gray-50 transition-colors"
+                >
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <FileText className="w-5 h-5 text-gray-400 mr-3" />
@@ -222,36 +186,31 @@ const handleUpdateStatus = async (id, newStatus) => {
                       </div>
                     </div>
                   </td>
+
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{taxReturn.email}</div>
+                    <div className="text-sm text-gray-900">
+                      {taxReturn.email}
+                    </div>
                   </td>
-                  {/* <td className="px-6 py-4 whitespace-nowrap">
-                    <span
-                      className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                        statusColors[taxReturn.status] || 'bg-gray-100 text-gray-800'
+
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <select
+                      value={taxReturn.status}
+                      onChange={(e) =>
+                        handleUpdateStatus(taxReturn.id, e.target.value)
+                      }
+                      className={`text-xs px-2 py-1 rounded-full border-0 ${
+                        statusColors[taxReturn.status] ||
+                        "bg-gray-100 text-gray-800"
                       }`}
                     >
-                      {taxReturn.status}
-                    </span>
-                    
-                    
-                  </td> */}
-           <select
-  value={taxReturn.status}
-  onChange={(e) => handleUpdateStatus(taxReturn.id, e.target.value)}
-  className={`text-xs px-2 py-1 rounded-full border-0 ${
-    statusColors[taxReturn.status] || 'bg-gray-100 text-gray-800'
-  }`}
->
-  {statuses.slice(1).map((status) => ( // exclude "All"
-    <option key={status} value={status}>
-      {status}
-    </option>
-  ))}
-</select>
-
-
-
+                      {statuses.slice(1).map((status) => (
+                        <option key={status} value={status}>
+                          {status}
+                        </option>
+                      ))}
+                    </select>
+                  </td>
 
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
@@ -261,12 +220,16 @@ const handleUpdateStatus = async (id, newStatus) => {
                       </span>
                     </div>
                   </td>
+
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {/* <button
                       onClick={() => handleViewReturn(taxReturn)}
                       className="text-blue-600 hover:text-blue-700 transition-colors flex items-center space-x-1"
-                    > */}
-                    <Link
+                    >
+                      <Eye className="w-4 h-4" />
+                      <span>View</span> */}
+
+                         <Link
                 to={`/customers/${taxReturn.customer_id
 }`}
                 className="text-blue-600 hover:text-blue-700 transition-colors text-sm"
@@ -285,11 +248,14 @@ const handleUpdateStatus = async (id, newStatus) => {
         {filteredReturns.length === 0 && (
           <div className="text-center py-12">
             <FileText className="mx-auto h-12 w-12 text-gray-400" />
-            <h3 className="mt-2 text-sm font-medium text-gray-900">No returns found</h3>
+            <h3 className="mt-2 text-sm font-medium text-gray-900">
+              No returns found
+            </h3>
             <p className="mt-1 text-sm text-gray-500">
-              {selectedStatus !== 'All' && (
+              {selectedStatus !== "All" && (
                 <div className="text-sm text-gray-600">
-                  Filtered by: <span className="font-medium">{selectedStatus}</span>
+                  Filtered by:{" "}
+                  <span className="font-medium">{selectedStatus}</span>
                 </div>
               )}
             </p>
@@ -297,52 +263,73 @@ const handleUpdateStatus = async (id, newStatus) => {
         )}
       </div>
 
-      {/* Return Detail Modal */}
+      {/* Detail Modal */}
       {/* <Modal
         isOpen={showDetailModal}
         onClose={() => setShowDetailModal(false)}
-        title={selectedReturn ? `${selectedReturn.name} - Details` : 'Return Details'}
+        title={
+          selectedReturn
+            ? `${selectedReturn.name} - Return Details`
+            : "Return Details"
+        }
         size="lg"
       >
         {selectedReturn && (
           <div className="space-y-6">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700">Return Name</label>
-                <p className="text-sm text-gray-900 mt-1">{selectedReturn.name}</p>
+                <label className="block text-sm font-medium text-gray-700">
+                  Return Name
+                </label>
+                <p className="text-sm text-gray-900 mt-1">
+                  {selectedReturn.name}
+                </p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Email</label>
-                <p className="text-sm text-gray-900 mt-1">{selectedReturn.email}</p>
+                <label className="block text-sm font-medium text-gray-700">
+                  Email
+                </label>
+                <p className="text-sm text-gray-900 mt-1">
+                  {selectedReturn.email}
+                </p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Type</label>
-                <p className="text-sm text-gray-900 mt-1">{selectedReturn.return_type}</p>
+                <label className="block text-sm font-medium text-gray-700">
+                  Type
+                </label>
+                <p className="text-sm text-gray-900 mt-1">
+                  {selectedReturn.return_type}
+                </p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Status</label>
+                <label className="block text-sm font-medium text-gray-700">
+                  Status
+                </label>
                 <span
                   className={`inline-flex px-2 py-1 text-xs font-medium rounded-full mt-1 ${
-                    statusColors[selectedReturn.status] || 'bg-gray-100 text-gray-800'
+                    statusColors[selectedReturn.status] ||
+                    "bg-gray-100 text-gray-800"
                   }`}
                 >
                   {selectedReturn.status}
                 </span>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Created At</label>
+                <label className="block text-sm font-medium text-gray-700">
+                  Created At
+                </label>
                 <p className="text-sm text-gray-900 mt-1">
                   {new Date(selectedReturn.created_at).toLocaleString()}
                 </p>
               </div>
               <div className="border-t pt-4">
-              <Link
-                to={`/customers/${selectedReturn.id}`}
-                className="text-blue-600 hover:text-blue-700 transition-colors text-sm"
-              >
-                View Customer Profile →
-              </Link>
-            </div>
+                <Link
+                  to={`/customers/${selectedReturn.customer_id}`}
+                  className="text-blue-600 hover:text-blue-700 transition-colors text-sm"
+                >
+                  View Customer Profile →
+                </Link>
+              </div>
             </div>
           </div>
         )}
@@ -350,8 +337,3 @@ const handleUpdateStatus = async (id, newStatus) => {
     </div>
   );
 }
-
-
-
-
-

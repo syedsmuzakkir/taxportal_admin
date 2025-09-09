@@ -129,11 +129,16 @@ const handleStatusClick = (status) => {
   <div className="flex items-center space-x-3">
     {!collapsed && (
       <div className="flex items-center space-x-3">
-        <div className="w-6 h-8 bg-blue-600 rounded flex items-center justify-center">
-          <FileText className="w-5 h-5 text-white" />
+        <div className="w-6 h-8  flex items-center justify-center">
+          {/* <FileText className="w-5 h-5 text-white" /> */}
+             <img src="../../src/images/favicon.svg" 
+  className="w-8 h-8" 
+  alt="TaxPortal Icon"
+  style={{ objectFit: 'contain' }}
+/>
         </div>
         <div>
-          <h1 className="text-lg font-bold text-gray-900">TaxPortal</h1>
+          <h1 className="text-lg font-bold text-gray-900">Tax Admin</h1>
           {/* <p className="text-xs text-gray-500">Demo</p> */}
            {/* <div className="font-medium text-gray-900">{user?.name}</div>
             <div className="text-xs text-gray-500 capitalize">{user?.role}</div> */}
