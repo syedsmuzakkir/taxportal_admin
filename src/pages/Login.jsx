@@ -147,20 +147,19 @@
 
 
 
-
-import React, { useState } from 'react';
-import { Navigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext.jsx';
-import { FileText, Mail, Lock, Eye, EyeOff } from 'lucide-react';
+import React, { useState } from "react";
+import { Navigate } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext.jsx";
+import { FileText, Mail, Lock, Eye, EyeOff } from "lucide-react";
 
 export default function Login() {
   const { login, isAuthenticated, requiresOTP, isLoading } = useAuth();
   const [formData, setFormData] = useState({
-    email: '',
-    password: ''
+    email: "",
+    password: "",
   });
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (isLoading) {
@@ -181,7 +180,7 @@ export default function Login() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
+    setError("");
     setIsSubmitting(true);
 
     try {
@@ -190,7 +189,7 @@ export default function Login() {
         setError(result.error);
       }
     } catch (err) {
-      setError('An unexpected error occurred');
+      setError("An unexpected error occurred");
     } finally {
       setIsSubmitting(false);
     }
@@ -199,7 +198,7 @@ export default function Login() {
   const handleChange = (e) => {
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [e.target.name]: e.target.value,
     });
   };
 
@@ -210,12 +209,12 @@ export default function Login() {
           <div className="text-center mb-8">
             <div className="mx-auto w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center mb-4">
               {/* <FileText className="w-8 h-8 text-white" /> */}
-              <img src="../../src/images/favicon.svg" 
-  className="w-8 h-8" 
-  alt="TaxPortal Icon"
-  style={{ objectFit: 'contain' }}
-/>
-              
+              <img
+                src="../../src/images/favicon.svg"
+                className="w-8 h-8"
+                alt="TaxPortal Icon"
+                style={{ objectFit: "contain" }}
+              />
             </div>
             <h1 className="text-2xl font-bold text-gray-900">Tax Admin</h1>
             <p className="text-gray-600 mt-2">Sign in to your account</p>
@@ -229,7 +228,10 @@ export default function Login() {
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+              <label
+                htmlFor="email"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
                 Email Address
               </label>
               <div className="relative">
@@ -250,7 +252,10 @@ export default function Login() {
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+              <label
+                htmlFor="password"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
                 Password
               </label>
               <div className="relative">
@@ -260,7 +265,7 @@ export default function Login() {
                 <input
                   id="password"
                   name="password"
-                  type={showPassword ? 'text' : 'password'}
+                  type={showPassword ? "text" : "password"}
                   required
                   value={formData.password}
                   onChange={handleChange}
@@ -286,11 +291,9 @@ export default function Login() {
               disabled={isSubmitting}
               className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
             >
-              {isSubmitting ? 'Signing in...' : 'Sign In'}
+              {isSubmitting ? "Signing in..." : "Sign In"}
             </button>
           </form>
-
-         
         </div>
       </div>
     </div>

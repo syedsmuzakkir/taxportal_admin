@@ -22,85 +22,87 @@ export default function Customers() {
   const [newCustomer, setNewCustomer] = useState({
     name: '',
     email: '',
-   
     password: '',
-  phone: '',
-  role: 'individual',
+    phone: '',
+    role: 'individual',
   });
 
   useEffect(() => {
     loadCustomers();
   }, [contextCustomers]);
 
-  // const loadCustomers = async () => {
-  //   try {
-  //     setIsLoading(true);
-  //     // let allCustomers = await customersAPI.getAll();
-      
-  //     let allCustomers = await customersAPI( 'http://192.168.1.5:3000/api/allCustomers');
-
-  //     console.log(allCustomers, 'this is customers api ')
-
-      
- 
-  //     // Filter for clients - they can only see their own data
-  //     if (user?.role === 'client') {
-  //       allCustomers = allCustomers.filter(c => c.ownerId === user.id);
-  //     }
-      
-  //     setCustomers(allCustomers);
-  //   } catch (error) {
-  //     console.error('Error loading customers:', error);
-  //   } finally {
-  //     setIsLoading(false);
-  //   }
-  // };
-
-
   const loadCustomers = async () => {
-  try {
-    setIsLoading(true);
-    // Fetch customers from the new API endpoint
-    const response = await fetch(`${BASE_URL}/api/allCustomers`);
-    const data = await response.json();
-    
-    let allCustomers = data.users.map(user => ({
-      id: user.customerId || '',  // Math.random().toString(36).substr(2, 9), // Generate a random ID if not provided
-      name: user.customerName,
-      email: user.customerEmail,
-      mobile: user.customerPhone || '',
-      documentsCount: user.totalDocuments || 0,
-      returnsCount: user.totalReturns || 0,
-      status: user.taxReturnStatus || 'No Return',
-      taxReturnId: user.taxReturnId || null,
-      taxReturnName: user.taxReturnName || null,
-      returnType: user.returnType || null,
-      statusLog: user.statusLog || [],
-      createdAt: user.createdAt || new Date().toISOString(),
-      modifiedAt: user.modifiedAt || new Date().toISOString()
-    }));
-    
-    console.log(allCustomers ,' this is customer')
-    // Filter for clients - they can only see their own data
-    if (user?.role === 'client') {
-      allCustomers = allCustomers.filter(c => c.ownerId === user.id);
+    try {
+      setIsLoading(true);
+      // Fetch customers from the new API endpoint
+      const response = await fetch(`${BASE_URL}/api/allCustomers`,{
+      headers: {
+        "Content-Type": "application/json",
+        "ngrok-skip-browser-warning": "true",
+      },
+    });
+      const data = await response.json();
+      
+      let allCustomers = data.users.map(user => ({
+        id: user.customerId,
+        name: user.customerName,
+        email: user.customerEmail,
+        mobile: user.customerPhone || '',
+        documentsCount: user.totalDocuments || 0,
+        returnsCount: user.totalReturns || 0,
+        // Convert boolean status to string for UI
+        status: user.status ? 'Active' : 'Inactive',
+        taxReturnId: user.taxReturnId || null,
+        taxReturnName: user.taxReturnName || null,
+        returnType: user.returnType || null,
+        statusLog: user.statusLog || [],
+        createdAt: user.createdAt || new Date().toISOString(),
+        modifiedAt: user.modifiedAt || new Date().toISOString(),
+        role:user.role
+      }));
+      
+      // Filter for clients - they can only see their own data
+      if (user?.role === 'client') {
+        allCustomers = allCustomers.filter(c => c.ownerId === user.id);
+      }
+      
+      setCustomers(allCustomers);
+    } catch (error) {
+      console.error('Error loading customers:', error);
+    } finally {
+      setIsLoading(false);
     }
-    
-    setCustomers(allCustomers);
-  } catch (error) {
-    console.error('Error loading customers:', error);
-  } finally {
-    setIsLoading(false);
-  }
-};
-  const handleStatusChange = async (customerId, newStatus, customerName) => {
+  };
+
+  const handleStatusChange = async (customerId, newStatus, customerName ,role) => {
     try {
       setEditingStatus({ ...editingStatus, [customerId]: true });
-      const updatedCustomer = await customersAPI.update(customerId, { status: newStatus });
       
+      // Convert string status back to boolean for API
+      const statusBoolean = newStatus === 'Active';
+      
+      // console.log(role, 'this is type')
+      console.log(customerName, 'this is name')
+      // Update customer status via API
+      const response = await fetch(`${BASE_URL}/api/changeCustomerStatus/${customerId}`, {
+  method: 'PATCH',
+  mode: 'cors', // Explicitly set CORS mode
+  headers: {
+    "ngrok-skip-browser-warning": "true",
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({ 'status': statusBoolean }),
+});
+      
+      if (!response.ok) {
+        throw new Error('Failed to update status');
+      }
+      
+      // Update local state
       const updatedCustomers = customers.map(c => 
-        c.id === customerId ? updatedCustomer : c
+        c.id === customerId ? {...c, status: newStatus} : c
       );
+      
       setCustomers(updatedCustomers);
       updateCustomers(updatedCustomers);
 
@@ -121,126 +123,103 @@ export default function Customers() {
 
     } catch (error) {
       console.error('Error updating status:', error);
+      addNotification({
+        title: 'Status Update Failed',
+        body: `Failed to update status for ${customerName}`,
+        level: 'error'
+      });
     } finally {
       setEditingStatus({ ...editingStatus, [customerId]: false });
     }
   };
 
-  // const handleCreateCustomer = async (e) => {
-  //   e.preventDefault();
-    
-  //   try {
-  //     const customerData = {
-  //       ...newCustomer,
-  //       ownerId: user.role === 'client' ? user.id : null
-  //     };
+  const handleCreateCustomer = async (e) => {
+    e.preventDefault();
 
-  //     const createdCustomer = await customersAPI.create(customerData);
-  //     const updatedCustomers = [...customers, createdCustomer];
-  //     setCustomers(updatedCustomers);
-  //     updateCustomers(updatedCustomers);
+    try {
+      const payload = {
+        name: newCustomer.name,
+        email: newCustomer.email,
+        password: newCustomer.password,
+        role: newCustomer.role,
+        phone: newCustomer.mobile,
+      };
 
-  //     // Add activity
-  //     addActivity({
-  //       user: user.name,
-  //       action: `Created new customer ${createdCustomer.name}`,
-  //       entityType: 'customer',
-  //       entityId: createdCustomer.id
-  //     });
+      const response = await fetch(`${BASE_URL}/api/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
 
-  //     await addNotification({
-  //       title: 'New Customer Created',
-  //       body: `${createdCustomer.name} has been added to the system`,
-  //       level: 'success',
-  //       relatedEntity: { type: 'customer', id: createdCustomer.id }
-  //     });
+      const data = await response.json();
 
-  //     setNewCustomer({
-  //       name: '',
-  //       email: '',
-  //       mobile: '',
-  //       ssn: '',
-  //       status: 'Active'
-  //     });
-  //     setShowCreateModal(false);
-  //   } catch (error) {
-  //     console.error('Error creating customer:', error);
-  //   }
-  // };
+      if (!response.ok) {
+        throw new Error(data.error || "Registration failed");
+      }
 
+      // Success flow
+      const createdCustomer = data;
 
- const handleCreateCustomer = async (e) => {
-  e.preventDefault();
+      const updatedCustomers = [...customers, {
+        id: createdCustomer.id || createdCustomer.customerId,
+        name: createdCustomer.name || createdCustomer.customerName,
+        email: createdCustomer.email || createdCustomer.customerEmail,
+        mobile: createdCustomer.phone || createdCustomer.mobile || '',
+        documentsCount: 0,
+        returnsCount: 0,
+        status: 'Active', // Default status for new customers
+        
+      }];
+      
+      setCustomers(updatedCustomers);
+      updateCustomers(updatedCustomers);
 
-  try {
-    const payload = {
-      name: newCustomer.name,
-      email: newCustomer.email,
-      password: newCustomer.password,
-      role: newCustomer.role,
-      phone: newCustomer.mobile,
-    };
+      addActivity({
+        user: user.name,
+        action: `Created new customer ${createdCustomer.name || createdCustomer.customerName}`,
+        entityType: "customer",
+        entityId: createdCustomer.id || createdCustomer.customerId,
+      });
 
-    const response = await fetch(`${BASE_URL}/api/register`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
+      await addNotification({
+        title: "New Customer Created",
+        body: `${createdCustomer.name || createdCustomer.customerName} has been added to the system`,
+        level: "success",
+        relatedEntity: { type: "customer", id: createdCustomer.id || createdCustomer.customerId },
+      });
 
-    const data = await response.json(); // 👈 always parse response
+      setNewCustomer({
+        name: "",
+        email: "",
+        password: "",
+        mobile: "",
+        role: "individual",
+      });
+      setShowCreateModal(false);
 
-    if (!response.ok) {
-      // Backend sends { "error": "..." }
-      throw new Error(data.error || "Registration failed");
+    } catch (error) {
+      console.error("Error creating customer:", error.message);
+
+      await addNotification({
+        title: "Customer Creation Failed",
+        body: error.message,
+        level: "error",
+      });
     }
-
-    // Success flow
-    const createdCustomer = data;
-
-    const updatedCustomers = [...customers, createdCustomer];
-    setCustomers(updatedCustomers);
-    updateCustomers(updatedCustomers);
-
-    addActivity({
-      user: user.name,
-      action: `Created new customer ${createdCustomer.name}`,
-      entityType: "customer",
-      entityId: createdCustomer.id,
-    });
-
-    await addNotification({
-      title: "New Customer Created",
-      body: `${createdCustomer.user.name} has been added to the system`,
-      level: "success",
-      relatedEntity: { type: "customer", id: createdCustomer.id },
-    });
-
-    setNewCustomer({
-      name: "",
-      email: "",
-      password: "",
-      mobile: "",
-      role: "individual",
-    });
-    setShowCreateModal(false);
-
-  } catch (error) {
-    console.error("Error creating customer:", error.message);
-
-    // Show backend error in your app
-    await addNotification({
-      title: "Customer Creation Failed",
-      body: error.message, // 👈 will show "Email already registered."
-      level: "error",
-    });
-  }
-};
-
+  };
 
   const handleDeleteCustomer = async (customerId, customerName) => {
     if (window.confirm(`Are you sure you want to delete ${customerName}?`)) {
       try {
-        await customersAPI.delete(customerId);
+        // Call API to delete customer
+        const response = await fetch(`${BASE_URL}/api/deleteCustomer/${customerId}`, {
+          method: 'DELETE',
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to delete customer');
+        }
+        
         const updatedCustomers = customers.filter(c => c.id !== customerId);
         setCustomers(updatedCustomers);
         updateCustomers(updatedCustomers);
@@ -262,23 +241,24 @@ export default function Customers() {
 
       } catch (error) {
         console.error('Error deleting customer:', error);
+        addNotification({
+          title: 'Deletion Failed',
+          body: `Failed to delete ${customerName}`,
+          level: 'error'
+        });
       }
     }
   };
 
-  // const filteredCustomers = customers.filter(customer =>
-  //   customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-  //   customer.email.toLowerCase().includes(searchTerm.toLowerCase())
-  // );
-
   const filteredCustomers = customers.filter(customer =>
-  (customer?.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-  (customer?.email?.toLowerCase() || '').includes(searchTerm.toLowerCase())
-);
+    (customer?.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+    (customer?.email?.toLowerCase() || '').includes(searchTerm.toLowerCase())
+  );
+
   const getStatusColor = (status) => {
     switch (status) {
       case 'Active': return 'bg-green-100 text-green-800';
-      case 'Pending': return 'bg-yellow-100 text-yellow-800';
+      // case 'Pending': return 'bg-yellow-100 text-yellow-800';
       case 'Inactive': return 'bg-red-100 text-red-800';
       default: return 'bg-gray-100 text-gray-800';
     }
@@ -366,14 +346,13 @@ export default function Customers() {
                     {can('action:customer.edit') ? (
                       <select
                         value={customer.status}
-                        onChange={(e) => handleStatusChange(customer.id, e.target.value, customer.name)}
+                        onChange={(e) => handleStatusChange(customer.id, e.target.value, customer.name, customer.role)}
                         disabled={editingStatus[customer.id]}
                         className={`text-xs px-2 py-1 rounded-full border-0 ${getStatusColor(customer.status)} ${
                           editingStatus[customer.id] ? 'opacity-50' : 'cursor-pointer'
                         }`}
                       >
                         <option value="Active">Active</option>
-                        <option value="Pending">Pending</option>
                         <option value="Inactive">Inactive</option>
                       </select>
                     ) : (
@@ -391,14 +370,6 @@ export default function Customers() {
                       >
                         <Eye className="w-4 h-4" />
                       </Link>
-                      {/* {can('action:customer.edit') && (
-                        <button 
-                          className="text-gray-600 hover:text-gray-700 transition-colors"
-                          title="Edit Customer"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                      )} */}
                       {can('action:customer.delete') && (
                         <button 
                           onClick={() => handleDeleteCustomer(customer.id, customer.name)}
@@ -428,86 +399,84 @@ export default function Customers() {
       </div>
 
       {/* Create Customer Modal */}
-     
-     <Modal
-  isOpen={showCreateModal}
-  onClose={() => setShowCreateModal(false)}
-  title="Create New Customer"
->
-  <form onSubmit={handleCreateCustomer} className="space-y-4">
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
-      <input
-        type="text"
-        required
-        value={newCustomer.name}
-        onChange={(e) => setNewCustomer({ ...newCustomer, name: e.target.value })}
-        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-        placeholder="Enter customer name"
-      />
-    </div>
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
-      <input
-        type="email"
-        required
-        value={newCustomer.email}
-        onChange={(e) => setNewCustomer({ ...newCustomer, email: e.target.value })}
-        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-        placeholder="Enter email address"
-      />
-    </div>
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
-      <input
-        type="password"
-        required
-        value={newCustomer.password}
-        onChange={(e) => setNewCustomer({ ...newCustomer, password: e.target.value })}
-        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-        placeholder="Enter password"
-      />
-    </div>
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-2">Phone</label>
-      <input
-        type="tel"
-        required
-        value={newCustomer.phone}
-        onChange={(e) => setNewCustomer({ ...newCustomer, phone: e.target.value })}
-        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-        placeholder="+1-555-0123"
-      />
-    </div>
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-2">Role</label>
-      <select
-        value={newCustomer.role}
-        onChange={(e) => setNewCustomer({ ...newCustomer, role: e.target.value })}
-        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+      <Modal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        title="Create New Customer"
       >
-        <option value="individual">Individual</option>
-        <option value="business">Business</option>
-      </select>
-    </div>
-    <div className="flex space-x-3 pt-4">
-      <button
-        type="submit"
-        className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors"
-      >
-        Create Customer
-      </button>
-      <button
-        type="button"
-        onClick={() => setShowCreateModal(false)}
-        className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-400 transition-colors"
-      >
-        Cancel
-      </button>
-    </div>
-  </form>
-</Modal>
-
+        <form onSubmit={handleCreateCustomer} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
+            <input
+              type="text"
+              required
+              value={newCustomer.name}
+              onChange={(e) => setNewCustomer({ ...newCustomer, name: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Enter customer name"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+            <input
+              type="email"
+              required
+              value={newCustomer.email}
+              onChange={(e) => setNewCustomer({ ...newCustomer, email: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Enter email address"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
+            <input
+              type="password"
+              required
+              value={newCustomer.password}
+              onChange={(e) => setNewCustomer({ ...newCustomer, password: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Enter password"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Phone</label>
+            <input
+              type="tel"
+              required
+              value={newCustomer.phone}
+              onChange={(e) => setNewCustomer({ ...newCustomer, phone: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="+1-555-0123"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Role</label>
+            <select
+              value={newCustomer.role}
+              onChange={(e) => setNewCustomer({ ...newCustomer, role: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="individual">Individual</option>
+              <option value="business">Business</option>
+            </select>
+          </div>
+          <div className="flex space-x-3 pt-4">
+            <button
+              type="submit"
+              className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors"
+            >
+              Create Customer
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowCreateModal(false)}
+              className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-400 transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }
