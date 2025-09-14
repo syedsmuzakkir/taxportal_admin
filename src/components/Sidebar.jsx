@@ -19,6 +19,7 @@ import { useNavigate } from 'react-router-dom';
 import { useNotifications } from '../contexts/NotificationsContext.jsx';
 import { Bell, LogOut, Menu, User } from 'lucide-react';
 import NotificationCenter from './NotificationCenter.jsx';
+import Icons from '../images/favicon.svg'
 
 const taxReturnStatuses = [
   'initial request',
@@ -131,7 +132,7 @@ const handleStatusClick = (status) => {
       <div className="flex items-center space-x-3">
         <div className="w-6 h-8  flex items-center justify-center">
           {/* <FileText className="w-5 h-5 text-white" /> */}
-             <img src="../../src/images/favicon.svg" 
+             <img src={Icons}
   className="w-8 h-8" 
   alt="TaxPortal Icon"
   style={{ objectFit: 'contain' }}
