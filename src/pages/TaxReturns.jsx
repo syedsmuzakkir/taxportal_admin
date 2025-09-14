@@ -9,21 +9,21 @@ import { BASE_URL } from "../api/BaseUrl.js";
 
 const statuses = [
   "All",
-  "Initial Request",
-  "Document Verified",
-  "In Preparation",
-  "In Review",
-  "Ready to File",
-  "Filed Return",
+  "initial request",
+  "document verified",
+  "in preparation",
+  "in review",
+  "ready to file",
+  "filed return",
 ];
 
 const statusColors = {
-  "Initial Request": "bg-gray-100 text-gray-800",
-  "Document Verified": "bg-blue-100 text-blue-800",
-  "In Preparation": "bg-yellow-100 text-yellow-800",
-  "In Review": "bg-orange-100 text-orange-800",
-  "Ready to File": "bg-purple-100 text-purple-800",
-  "Filed Return": "bg-green-100 text-green-800",
+  "initial request": "bg-gray-100 text-gray-800",
+  "document verified": "bg-blue-100 text-blue-800",
+  "in preparation": "bg-yellow-100 text-yellow-800",
+  "in review": "bg-orange-100 text-orange-800",
+  "ready to file": "bg-purple-100 text-purple-800",
+  "filed return": "bg-green-100 text-green-800",
 };
 
 export default function TaxReturns() {
@@ -57,7 +57,10 @@ export default function TaxReturns() {
   const fetchAllReturns = async () => {
     try {
       setIsLoading(true);
-      const res = await fetch(`${BASE_URL}/api/get-all-returns`);
+      const res = await fetch(`${BASE_URL}/api/get-all-returns`, { headers: {
+    "ngrok-skip-browser-warning": "true",
+    'Content-Type': 'application/json',
+    }},);
       const result = await res.json();
 
       setTaxReturns(result.data || []);
@@ -69,7 +72,7 @@ export default function TaxReturns() {
     }
   };
 
-  const handleUpdateStatus = async (id, newStatus) => {
+  const handleUpdateStatus = async (id, newStatus, roles, customerId) => {
     try {
       console.log("Updating status:", id, newStatus);
 
@@ -80,6 +83,8 @@ export default function TaxReturns() {
           newStatus,
           createdby_type: role,
           createdby_id: loginId,
+          customer_type: roles,
+          customer_id:customerId
         }),
       });
 
@@ -197,7 +202,7 @@ export default function TaxReturns() {
                     <select
                       value={taxReturn.status}
                       onChange={(e) =>
-                        handleUpdateStatus(taxReturn.id, e.target.value)
+                        handleUpdateStatus(taxReturn.id, e.target.value, taxReturn.role, taxReturn.customer_id)
                       }
                       className={`text-xs px-2 py-1 rounded-full border-0 ${
                         statusColors[taxReturn.status] ||

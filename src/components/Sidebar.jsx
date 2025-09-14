@@ -21,12 +21,12 @@ import { Bell, LogOut, Menu, User } from 'lucide-react';
 import NotificationCenter from './NotificationCenter.jsx';
 
 const taxReturnStatuses = [
-  'Initial Request',
-  'Document Verified',
-  'In Preparation',
-  'In Review', 
-  'Ready to File',
-  'Filed Return'
+  'initial request',
+  'document verified',
+  'in preparation',
+  'in review', 
+  'ready to file',
+  'filed return'
 ];
 
 export default function Sidebar({ collapsed, onToggle }) {
