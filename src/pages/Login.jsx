@@ -151,6 +151,7 @@ import React, { useState } from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext.jsx";
 import { FileText, Mail, Lock, Eye, EyeOff } from "lucide-react";
+import Icons from '../images/favicon.svg'
 
 export default function Login() {
   const { login, isAuthenticated, requiresOTP, isLoading } = useAuth();
@@ -210,7 +211,7 @@ export default function Login() {
             <div className="mx-auto w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center mb-4">
               {/* <FileText className="w-8 h-8 text-white" /> */}
               <img
-                src="../../src/images/favicon.svg"
+                src={Icons}
                 className="w-8 h-8"
                 alt="TaxPortal Icon"
                 style={{ objectFit: "contain" }}

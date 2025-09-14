@@ -140,6 +140,7 @@ import React, { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { FileText, RotateCcw } from 'lucide-react';
+import Icons from '../images/favicon.svg'
 
 export default function TwoFA() {
   const { user, verifyOTP, otpValidated, isAuthenticated, loginEmail, isLoading, resendOTP } = useAuth();
@@ -238,7 +239,7 @@ export default function TwoFA() {
           <div className="text-center mb-8">
             <div className="mx-auto w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center mb-4">
               {/* <FileText className="w-8 h-8 text-white" /> */}
-                   <img src="../../src/images/favicon.svg" 
+                   <img src={Icons} 
   className="w-8 h-8" 
   alt="TaxPortal Icon"
   style={{ objectFit: 'contain' }}
