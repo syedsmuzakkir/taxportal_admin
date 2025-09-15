@@ -112,12 +112,12 @@ const handleStatusClick = (status) => {
       icon: CreditCard,
       permission: 'page:payments'
     },
-    {
-      name: 'Settings',
-      path: '/settings',
-      icon: Settings,
-      permission: 'page:settings'
-    }
+    // {
+    //   name: 'Settings',
+    //   path: '/settings',
+    //   icon: Settings,
+    //   permission: 'page:settings'
+    // }
   ];
 
   const visibleItems = navigationItems.filter(item => can(item.permission));
@@ -283,7 +283,7 @@ const handleStatusClick = (status) => {
             <div className={`absolute bg-white rounded-md shadow-lg border border-gray-200 py-1 z-50 ${
               collapsed ? 'left-16 bottom-0 w-48' : 'left-0 bottom-full mb-2 w-full'
             }`}>
-              <button
+              {/* <button
                 onClick={() => {
                   setShowUserMenu(false);
                   navigate('/settings');
@@ -292,7 +292,7 @@ const handleStatusClick = (status) => {
               >
                 <Settings className="w-4 h-4 mr-2" />
                 Settings
-              </button>
+              </button> */}
               <hr className="my-1" />
               <button
                 onClick={() => {
