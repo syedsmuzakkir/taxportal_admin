@@ -296,7 +296,7 @@ export default function Invoices() {
             <thead className="bg-gray-100">
               <tr>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
-                  ID
+                  SN
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
                   Customer
@@ -328,7 +328,7 @@ export default function Invoices() {
                     }`}
                   >
                     <td className="px-4 py-3 text-gray-800 font-medium">
-                      {inv.id}
+                      {idx+1}
                     </td>
                     <td className="px-4 py-3 text-gray-700">{inv.customer_name}</td>
                     <td className="px-4 py-3 text-gray-700">{inv.return_id}</td>
@@ -587,8 +587,8 @@ export default function Invoices() {
                       }
                     >
                       <option value="pending">Pending</option>
-                      <option value="paid">Paid</option>
-                      <option value="overdue">Overdue</option>
+                      {/* <option value="paid">Paid</option> */}
+                      {/* <option value="overdue">Overdue</option> */}
                     </select>
                     <input
                       type="date"
