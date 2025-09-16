@@ -380,7 +380,7 @@ export default function Customers() {
                       >
                         <Eye className="w-4 h-4" />
                       </Link>
-                      {can('action:customer.delete') && (
+                      {/* {can('action:customer.delete') && (
                         <button 
                           onClick={() => handleDeleteCustomer(customer.id, customer.name)}
                           className="text-red-600 hover:text-red-700 transition-colors"
@@ -388,7 +388,7 @@ export default function Customers() {
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
-                      )}
+                      )} */}
                     </div>
                   </td>
                 </tr>
