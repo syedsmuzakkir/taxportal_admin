@@ -64,7 +64,7 @@ export default function Overview() {
         paidAmount,
       });
     } catch (err) {
-      console.error('Failed to fetch dashboard data:', err);
+      // console.error('Failed to fetch dashboard data:', err);
     }
   };
 
@@ -79,7 +79,7 @@ export default function Overview() {
       const data = await res.json();
       setActivities(data);
     } catch (err) {
-      console.error('Failed to fetch activities:', err);
+      // console.error('Failed to fetch activities:', err);
     }
   };
 

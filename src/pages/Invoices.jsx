@@ -78,7 +78,7 @@ export default function Invoices() {
       const data = await response.json();
       setCustomers(data.users);
     } catch (error) {
-      console.error("Error loading customers:", error);
+      // console.error("Error loading customers:", error);
       addNotification({
   title: "Status",
   body: `${error}`,
@@ -101,7 +101,7 @@ export default function Invoices() {
       const data = await response.json();
       setInvoices(data || []);
     } catch (error) {
-      console.error("Error loading invoices:", error);
+      // console.error("Error loading invoices:", error);
     } finally {
       setLoadingState("invoices", false);
       setIsLoading(false);
@@ -127,7 +127,7 @@ export default function Invoices() {
         const data = await response.json();
         setTaxReturns(data);
       } catch (error) {
-        console.error("Error fetching returns:", error);
+        // console.error("Error fetching returns:", error);
       } finally {
         setLoadingState("taxReturns", false);
       }
@@ -149,7 +149,7 @@ export default function Invoices() {
   };
 
   const removeLineItem = (index) => {
-    if (invoiceData.line_items.length <= 1) return;
+    // if (invoiceData.line_items.length <= 1) return;
     setInvoiceData((prev) => ({
       ...prev,
       line_items: prev.line_items.filter((_, i) => i !== index),
@@ -308,6 +308,8 @@ export default function Invoices() {
         body: JSON.stringify(payload),
       });
 
+      const res = await response.json()
+      console.log(data.error)
       if (response.ok) {
         // alert("Invoice created successfully!");
          addNotification({
@@ -331,14 +333,15 @@ export default function Invoices() {
         loadInvoices();
       } else {
         // alert("Failed to create invoice");
+        console.log(error)
           addNotification({
   title: "Status",
-  body: `${response?.error|| 'error failed to create  '}`,
+  body: `${response?.res|| 'in  '}`,
   level: "error",
 });
       }
     } catch (error) {
-      console.error("Error creating invoice:", error);
+      // console.error("Error creating invoice:", error);
       // alert("Error creating invoice");
       addNotification({
   title: "Status",
@@ -441,7 +444,7 @@ export default function Invoices() {
                 filteredInvoices.map((inv, idx) => (
                   <tr
                     key={inv.id}
-                    className={`hover:bg-gray-50 transition-colors ${
+                    className={`hover:bg-gray-50 transition-colors  ${
                       idx % 2 === 0 ? "bg-white" : "bg-gray-50/50"
                     }`}
                   >
@@ -641,6 +644,36 @@ export default function Invoices() {
                       />
                     </div>
                   )}
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <select
+                      className="border p-2 rounded"
+                      required
+                      value={invoiceData.status}
+                      onChange={(e) =>
+                        setInvoiceData({
+                          ...invoiceData,
+                          status: e.target.value,
+                        })
+                      }
+                    >
+                      <option required value="pending">Pending</option>
+                      {/* <option value="paid">Paid</option> */}
+                      {/* <option value="overdue">Overdue</option> */}
+                    </select>
+                    <input
+                    required
+                      type="date"
+                      className="border p-2 rounded"
+                      value={invoiceData.due_date}
+                      onChange={(e) =>
+                        setInvoiceData({
+                          ...invoiceData,
+                          due_date: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
                   {/* Line Items */}
                   
                   <div>
@@ -732,33 +765,7 @@ export default function Invoices() {
                   </div>
 
                   {/* Status + Due Date */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <select
-                      className="border p-2 rounded"
-                      value={invoiceData.status}
-                      onChange={(e) =>
-                        setInvoiceData({
-                          ...invoiceData,
-                          status: e.target.value,
-                        })
-                      }
-                    >
-                      <option value="pending">Pending</option>
-                      {/* <option value="paid">Paid</option> */}
-                      {/* <option value="overdue">Overdue</option> */}
-                    </select>
-                    <input
-                      type="date"
-                      className="border p-2 rounded"
-                      value={invoiceData.due_date}
-                      onChange={(e) =>
-                        setInvoiceData({
-                          ...invoiceData,
-                          due_date: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
+                  
 
                   {/* Total */}
                   <div className="text-right font-semibold">

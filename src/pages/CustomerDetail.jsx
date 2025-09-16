@@ -127,7 +127,7 @@ export default function CustomerDetail() {
 
         setDocuments(result)
       } catch (error) {
-        console.error("Failed to fetch documents:", error)
+        // console.error("Failed to fetch documents:", error)
         setDocuments([])
       }
     }
@@ -143,7 +143,7 @@ export default function CustomerDetail() {
         const result = await response.json()
         setTimeline(result)
       } catch (error) {
-        console.error("Failed to fetch timeline:", error)
+        // console.error("Failed to fetch timeline:", error)
         setTimeline([])
       }
     }
@@ -172,7 +172,7 @@ export default function CustomerDetail() {
       setSaved(false)
      
       const data = await res.json()
-      console.log("Pricing added:", data)
+      // console.log("Pricing added:", data)
       setPrice("")
 
       // alert('Pricing added')
@@ -182,7 +182,7 @@ export default function CustomerDetail() {
   level: "success",
 });
     } catch (err) {
-      console.error("Error adding pricing:", err)
+      // console.error("Error adding pricing:", err)
       // alert(err)
         addNotification({
   title: "Status",
@@ -227,7 +227,7 @@ export default function CustomerDetail() {
   body: `${response?.error || 'Upload failed'}`,
   level: "error",
 });
-      console.error("Error uploading documents:", error)
+      // console.error("Error uploading documents:", error)
       throw error
     }
   }
@@ -261,7 +261,7 @@ export default function CustomerDetail() {
   body: `${response?.message || 'Failed to add comments'}`,
   level: "error",
 });
-      console.error("Error posting comment:", error)
+      // console.error("Error posting comment:", error)
       throw error
     }
   }
@@ -323,7 +323,7 @@ export default function CustomerDetail() {
   level: "success",
 });
     } catch (error) {
-      console.error("Error adding comment/uploading documents:", error)
+      // console.error("Error adding comment/uploading documents:", error)
       // alert(`Error: ${error.message}`)
 
        addNotification({
@@ -413,7 +413,7 @@ export default function CustomerDetail() {
       window.document.body.removeChild(link)
       window.URL.revokeObjectURL(url)
     } catch (error) {
-      console.error("Error downloading document:", error)
+      // console.error("Error downloading document:", error)
       // alert("Failed to download document. Please try again.")
        addNotification({
   title: "Status",
