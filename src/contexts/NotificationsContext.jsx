@@ -90,11 +90,12 @@ export function NotificationsProvider({ children }) {
   };
 
   const showToast = (toast) => {
+     const id = Date.now(); 
     dispatch({ type: 'ADD_TOAST', payload: toast });
     
     // Auto-remove toast after 5 seconds
     setTimeout(() => {
-      dispatch({ type: 'REMOVE_TOAST', payload: toast.id || Date.now() });
+      dispatch({ type: 'REMOVE_TOAST', payload: id });
     }, 5000);
   };
 

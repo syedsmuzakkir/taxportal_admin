@@ -19,15 +19,18 @@ import Payments from './pages/Payments.jsx';
 import Settings from './pages/Settings.jsx';
 import NotAuthorized from './pages/NotAuthorized.jsx';
 import NotFound from './pages/NotFound.jsx';
-
+import { ToastContainer } from "react-toastify";
 function App() {
   return (
+    
     <Router>
+      <ToastContainer position="top-right" autoClose={4000} />
       <AuthProvider>
         <PermissionsProvider>
           <NotificationsProvider>
             <DataProvider>
               <Routes>
+                
                 <Route path="/login" element={<Login />} />
                 <Route path="/2fa" element={<TwoFA />} />
                 <Route path="/not-authorized" element={<NotAuthorized />} />

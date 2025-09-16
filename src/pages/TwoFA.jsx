@@ -237,10 +237,10 @@ export default function TwoFA() {
       <div className="max-w-md w-full">
         <div className="bg-white rounded-lg shadow-lg p-8">
           <div className="text-center mb-8">
-            <div className="mx-auto w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center mb-4">
+            <div className="mx-auto w-16 h-16  rounded-full flex items-center justify-center mb-4">
               {/* <FileText className="w-8 h-8 text-white" /> */}
                    <img src={Icons} 
-  className="w-8 h-8" 
+  className="w-18 h-14" 
   alt="TaxPortal Icon"
   style={{ objectFit: 'contain' }}
 />
@@ -298,7 +298,7 @@ export default function TwoFA() {
 
           <div className="mt-6 text-center">
             <p className="text-xs text-gray-500">
-              Signed in as <strong>{loginEmail}</strong>
+              {/* Signed in as <strong>{loginEmail}</strong> */}
             </p>
           </div>
         </div>

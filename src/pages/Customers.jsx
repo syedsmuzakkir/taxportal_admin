@@ -31,6 +31,7 @@ export default function Customers() {
     loadCustomers();
   }, [contextCustomers]);
 
+  const userToken = localStorage.getItem('token')
   const loadCustomers = async () => {
     try {
       setIsLoading(true);
@@ -39,6 +40,7 @@ export default function Customers() {
       headers: {
         "Content-Type": "application/json",
         "ngrok-skip-browser-warning": "true",
+        "Authorization": `Bearer ${userToken}`
       },
     });
       const data = await response.json();
@@ -90,6 +92,7 @@ export default function Customers() {
   headers: {
     "ngrok-skip-browser-warning": "true",
     'Content-Type': 'application/json',
+    "Authorization": `Bearer ${userToken}`
   },
   body: JSON.stringify({ 'status': statusBoolean }),
 });
@@ -147,12 +150,17 @@ export default function Customers() {
 
       const response = await fetch(`${BASE_URL}/api/register`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json" ,"Authorization": `Bearer ${userToken}`},
         body: JSON.stringify(payload),
       });
 
       const data = await response.json();
 
+      addNotification({
+        title: 'Status',
+        body: `Registered Successfully`,
+        level: 'success'
+      });
       if (!response.ok) {
         throw new Error(data.error || "Registration failed");
       }
@@ -213,7 +221,9 @@ export default function Customers() {
       try {
         // Call API to delete customer
         const response = await fetch(`${BASE_URL}/api/deleteCustomer/${customerId}`, {
-          method: 'DELETE',
+          headers:{
+            "Authorization": `Bearer ${userToken}`
+          }
         });
         
         if (!response.ok) {
@@ -273,7 +283,7 @@ export default function Customers() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 ml-5">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Customers</h1>
         {can('action:customer.create') && (

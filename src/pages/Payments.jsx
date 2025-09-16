@@ -22,6 +22,7 @@ export default function Payments() {
   });
   const [isLoading, setIsLoading] = useState(true);
   const [processingRefund, setProcessingRefund] = useState({});
+const userToken = localStorage.getItem('token')
 
   useEffect(() => {
     loadPayments();
@@ -36,7 +37,12 @@ export default function Payments() {
       setIsLoading(true);
       // Fetch data from the provided API endpoint
       const response = await fetch(
-        `${BASE_URL}/api/getAllPayments`
+        `${BASE_URL}/api/getAllPayments`,{
+         headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${userToken}`,
+      },
+      }
       );
       const apiPayments = await response.json();
 
@@ -200,7 +206,7 @@ export default function Payments() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 ml-5">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Payments</h1>
         <button
