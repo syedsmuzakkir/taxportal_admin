@@ -70,7 +70,7 @@ export default function Customers() {
       
       setCustomers(allCustomers);
     } catch (error) {
-      console.error('Error loading customers:', error);
+      // console.error('Error loading customers:', error);
     } finally {
       setIsLoading(false);
     }
@@ -84,7 +84,7 @@ export default function Customers() {
       const statusBoolean = newStatus === 'Active';
       
       // console.log(role, 'this is type')
-      console.log(customerName, 'this is name')
+      // console.log(customerName, 'this is name')
       // Update customer status via API
       const response = await fetch(`${BASE_URL}/api/changeCustomerStatus/${customerId}`, {
   method: 'PATCH',
@@ -125,7 +125,7 @@ export default function Customers() {
       });
 
     } catch (error) {
-      console.error('Error updating status:', error);
+      // console.error('Error updating status:', error);
       addNotification({
         title: 'Status Update Failed',
         body: `Failed to update status for ${customerName}`,
@@ -206,7 +206,7 @@ export default function Customers() {
       setShowCreateModal(false);
 
     } catch (error) {
-      console.error("Error creating customer:", error.message);
+      // console.error("Error creating customer:", error.message);
 
       await addNotification({
         title: "Customer Creation Failed",
@@ -250,7 +250,7 @@ export default function Customers() {
         });
 
       } catch (error) {
-        console.error('Error deleting customer:', error);
+        // console.error('Error deleting customer:', error);
         addNotification({
           title: 'Deletion Failed',
           body: `Failed to delete ${customerName}`,

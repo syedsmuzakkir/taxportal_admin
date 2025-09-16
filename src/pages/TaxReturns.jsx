@@ -65,9 +65,9 @@ export default function TaxReturns() {
       const result = await res.json();
 
       setTaxReturns(result.data || []);
-      console.log("Fetched Returns:", result.data);
+      // console.log("Fetched Returns:", result.data);
     } catch (error) {
-      console.error("Error fetching returns:", error);
+      // console.error("Error fetching returns:", error);
     } finally {
       setIsLoading(false);
     }
@@ -75,7 +75,7 @@ export default function TaxReturns() {
 
   const handleUpdateStatus = async (id, newStatus, roles, customerId) => {
     try {
-      console.log("Updating status:", id, newStatus);
+      // console.log("Updating status:", id, newStatus);
 
       const res = await fetch(`${BASE_URL}/api/update-status/${id}`, {
         method: "PUT",
@@ -103,7 +103,7 @@ export default function TaxReturns() {
 
       fetchAllReturns();
     } catch (err) {
-      console.error("Update error:", err);
+      // console.error("Update error:", err);
       addNotification("Failed to update status", "error");
     }
   };

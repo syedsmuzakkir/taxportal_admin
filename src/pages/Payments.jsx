@@ -73,7 +73,7 @@ const userToken = localStorage.getItem('token')
         updatePayments(transformedPayments);
       }
     } catch (error) {
-      console.error("Error loading payments:", error);
+      // console.error("Error loading payments:", error);
       addNotification({
         title: "Error Loading Payments",
         body: "Failed to fetch payment data from the server.",
@@ -159,7 +159,7 @@ const userToken = localStorage.getItem('token')
         });
       }
     } catch (error) {
-      console.error("Error processing refund:", error);
+      // console.error("Error processing refund:", error);
     } finally {
       setProcessingRefund({ ...processingRefund, [paymentId]: false });
     }
@@ -224,7 +224,7 @@ const userToken = localStorage.getItem('token')
           <div className="flex items-center">
             <CreditCard className="w-8 h-8 text-green-600" />
             <div className="ml-4">
-              <p className="text-sm text-gray-600">Total Received</p>
+              <p className="text-sm text-gray-600">Total Payments</p>
               <p className="text-2xl font-bold text-gray-900">
                 ${totals.total.toFixed(2)}
               </p>
@@ -235,7 +235,7 @@ const userToken = localStorage.getItem('token')
           <div className="flex items-center">
             <CreditCard className="w-8 h-8 text-blue-600" />
             <div className="ml-4">
-              <p className="text-sm text-gray-600">Completed Payments</p>
+              <p className="text-sm text-gray-600">Completed Payments </p>
               <p className="text-2xl font-bold text-gray-900">
                 ${totals.completed.toFixed(2)}
               </p>
