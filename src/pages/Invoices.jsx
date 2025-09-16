@@ -308,7 +308,7 @@ export default function Invoices() {
         body: JSON.stringify(payload),
       });
 
-      const res = await response.json()
+      const data = await response.json()
       console.log(data.error)
       if (response.ok) {
         // alert("Invoice created successfully!");
@@ -333,10 +333,10 @@ export default function Invoices() {
         loadInvoices();
       } else {
         // alert("Failed to create invoice");
-        console.log(error)
+        // console.log(error)
           addNotification({
   title: "Status",
-  body: `${response?.res|| 'in  '}`,
+  body: `${response?.error|| 'price not set, please set the price first'}`,
   level: "error",
 });
       }
@@ -345,7 +345,7 @@ export default function Invoices() {
       // alert("Error creating invoice");
       addNotification({
   title: "Status",
-  body: `${response.error}`,
+  body: `${response?.error|| 'price not set, please set the price first'}`,
   level: "error",
 });
     } finally {
