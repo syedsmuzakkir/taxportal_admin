@@ -20,6 +20,8 @@ import {
   X,
 } from "lucide-react"
 import { BASE_URL } from "../api/BaseUrl"
+import { useNotifications } from "../contexts/NotificationsContext.jsx";
+
 
 function formatDate(iso) {
   return new Date(iso).toLocaleDateString()
@@ -51,6 +53,8 @@ function DocIcon({ type, className }) {
 }
 
 export default function CustomerDetail() {
+  const { addNotification } = useNotifications();
+  
   const { id } = useParams()
   const [taxReturns, setTaxReturns] = useState([])
   const [isLoading, setIsLoading] = useState(true)
@@ -71,13 +75,19 @@ export default function CustomerDetail() {
 
   const loginId = localStorage.getItem("loginId")
   const role = localStorage.getItem("role")
+  const userToken = localStorage.getItem('token')
   const fileInputRef = useRef(null)
 
   useEffect(() => {
     const fetchTaxReturns = async () => {
       try {
         setIsLoading(true)
-        const response = await fetch(`${BASE_URL}/api/tax-returns/${id}`)
+        const response = await fetch(`${BASE_URL}/api/tax-returns/${id}`, {
+
+          headers:{
+            "Authorization": `Bearer ${userToken}`
+          }
+        })
         // if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         if (!response.ok) {
           // Always show "No documents found" for non-200
@@ -100,7 +110,12 @@ export default function CustomerDetail() {
   useEffect(() => {
     const fetchDocuments = async () => {
       try {
-        const response = await fetch(`${BASE_URL}/api/documents/${openReturnId}`)
+        const response = await fetch(`${BASE_URL}/api/documents/${openReturnId}`, {
+
+          headers:{
+            "Authorization": `Bearer ${userToken}`
+          }
+        })
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
         const result = await response.json()
 
@@ -119,7 +134,11 @@ export default function CustomerDetail() {
 
     const getTimeline = async () => {
       try {
-        const response = await fetch(`${BASE_URL}/api/comments/${openReturnId}`)
+        const response = await fetch(`${BASE_URL}/api/comments/${openReturnId}`, {
+          headers:{
+            "Authorization": `Bearer ${userToken}`
+          }
+        })
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
         const result = await response.json()
         setTimeline(result)
@@ -140,7 +159,7 @@ export default function CustomerDetail() {
     try {
       const res = await fetch(`${BASE_URL}/api/add-pricing`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json","Authorization": `Bearer ${userToken}` },
         body: JSON.stringify({
           customer_id: customerId,
           return_id: returnId,
@@ -151,11 +170,25 @@ export default function CustomerDetail() {
         }),
       })
       setSaved(false)
-
+     
       const data = await res.json()
       console.log("Pricing added:", data)
+      setPrice("")
+
+      // alert('Pricing added')
+        addNotification({
+  title: "Status",
+  body: `${data?.message || 'Price added'}`,
+  level: "success",
+});
     } catch (err) {
       console.error("Error adding pricing:", err)
+      // alert(err)
+        addNotification({
+  title: "Status",
+  body: `${data?.error || 'failed to add'}`,
+  level: "error",
+});
     }
   }
 
@@ -178,11 +211,22 @@ export default function CustomerDetail() {
       const response = await fetch(`${BASE_URL}/api/upload-documents`, {
         method: "POST",
         body: formData,
+        "Authorization": `Bearer ${userToken}`
       })
-
+       addNotification({
+  title: "Status",
+  body: `${response?.message || 'Document uploaded successfully'}`,
+  level: "success",
+});
       if (!response.ok) throw new Error(`Upload failed: ${response.status}`)
       return await response.json()
+      
     } catch (error) {
+      addNotification({
+  title: "Status",
+  body: `${response?.error || 'Upload failed'}`,
+  level: "error",
+});
       console.error("Error uploading documents:", error)
       throw error
     }
@@ -192,7 +236,7 @@ export default function CustomerDetail() {
     try {
       const response = await fetch(`${BASE_URL}/api/add-comment`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${userToken}` },
         body: JSON.stringify({
           customerId: customerId,
           taxReturnId: returnId,
@@ -204,9 +248,19 @@ export default function CustomerDetail() {
         }),
       })
 
+       addNotification({
+  title: "Status",
+  body: `${response?.message || 'Comments added successfully'}`,
+  level: "success",
+});
       if (!response.ok) throw new Error(`Comment post failed: ${response.status}`)
       return await response.json()
     } catch (error) {
+       addNotification({
+  title: "Status",
+  body: `${response?.message || 'Failed to add comments'}`,
+  level: "error",
+});
       console.error("Error posting comment:", error)
       throw error
     }
@@ -239,24 +293,44 @@ export default function CustomerDetail() {
 
       // ✅ Refresh documents
       if (openReturnId) {
-        const response = await fetch(`${BASE_URL}/api/documents/${openReturnId}`)
+        const response = await fetch(`${BASE_URL}/api/documents/${openReturnId}`, {
+
+          headers:{
+            "Authorization": `Bearer ${userToken}`
+          }
+        })
         if (response.ok) {
           const updatedDocuments = await response.json()
           setDocuments(updatedDocuments)
         }
 
         // ✅ Refresh timeline as well
-        const timelineRes = await fetch(`${BASE_URL}/api/comments/${openReturnId}`)
+        const timelineRes = await fetch(`${BASE_URL}/api/comments/${openReturnId}`,{
+          headers:{
+            "Authorization": `Bearer ${userToken}`
+          }
+        })
         if (timelineRes.ok) {
           const updatedTimeline = await timelineRes.json()
           setTimeline(updatedTimeline)
         }
       }
 
-      alert(`Successfully ${uploadedDocuments.length > 0 ? "uploaded documents and " : ""}added comment!`)
+      // alert(`Successfully ${uploadedDocuments.length > 0 ? "uploaded documents and " : ""}added comment!`)
+       addNotification({
+  title: "Status",
+  body: `${response?.message || 'Document uploaded successfully'}`,
+  level: "success",
+});
     } catch (error) {
       console.error("Error adding comment/uploading documents:", error)
-      alert(`Error: ${error.message}`)
+      // alert(`Error: ${error.message}`)
+
+       addNotification({
+  title: "Status",
+  body: `${response?.message || 'Error'}`,
+  level: "error",
+});
     } finally {
       setIsUploading(false)
     }
@@ -292,7 +366,13 @@ export default function CustomerDetail() {
   const downloadDocument = useCallback(async (doc) => {
     try {
       if (!doc.document_link) {
-        alert("Document link not available")
+        // alert("Document link not available")
+
+         addNotification({
+  title: "Status",
+  body: `${response?.message || 'Document link not available'}`,
+  level: "error",
+});
         return
       }
 
@@ -304,10 +384,18 @@ export default function CustomerDetail() {
       const downloadUrl = `${BASE_URL}/api/download?documentLink=${encodeURIComponent(doc.document_link)}`
 
       // Create a fetch request to get the file
-      const response = await fetch(downloadUrl)
+      const response = await fetch(downloadUrl, {
+        headers:{
 
+          "Authorization": `Bearer ${userToken}`
+        }
+      })
+
+      
       if (!response.ok) {
+        
         throw new Error(`Download failed: ${response.status}`)
+        
       }
 
       // Create blob from response
@@ -326,7 +414,12 @@ export default function CustomerDetail() {
       window.URL.revokeObjectURL(url)
     } catch (error) {
       console.error("Error downloading document:", error)
-      alert("Failed to download document. Please try again.")
+      // alert("Failed to download document. Please try again.")
+       addNotification({
+  title: "Status",
+  body: `${response?.message || 'Failed to download document. Please try again.'}`,
+  level: "error",
+});
     }
   }, [])
 

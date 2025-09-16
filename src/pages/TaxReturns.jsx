@@ -40,7 +40,7 @@ export default function TaxReturns() {
 
   const loginId = localStorage.getItem("loginId");
   const role = localStorage.getItem("role");
-
+  const userToken = localStorage.getItem('token')
   // ✅ Parse ?status= query param
   useEffect(() => {
     const queryParams = new URLSearchParams(location.search);
@@ -60,6 +60,7 @@ export default function TaxReturns() {
       const res = await fetch(`${BASE_URL}/api/get-all-returns`, { headers: {
     "ngrok-skip-browser-warning": "true",
     'Content-Type': 'application/json',
+    "Authorization": `Bearer ${userToken}`
     }},);
       const result = await res.json();
 
@@ -78,7 +79,7 @@ export default function TaxReturns() {
 
       const res = await fetch(`${BASE_URL}/api/update-status/${id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json","Authorization": `Bearer ${userToken}` },
         body: JSON.stringify({
           newStatus,
           createdby_type: role,
@@ -88,12 +89,18 @@ export default function TaxReturns() {
         }),
       });
 
+      const responsestatus= await res.json()
       if (!res.ok) {
         const text = await res.text();
         throw new Error(`Failed: ${res.status} - ${text}`);
       }
+      // addNotification("Status updated successfully", "success");
+      addNotification({
+  title: "Status",
+  body: `${responsestatus.message}`,
+  level: "success",
+});
 
-      addNotification("Status updated successfully", "success");
       fetchAllReturns();
     } catch (err) {
       console.error("Update error:", err);
@@ -123,7 +130,7 @@ export default function TaxReturns() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 ml-5">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Tax Returns</h1>
       </div>

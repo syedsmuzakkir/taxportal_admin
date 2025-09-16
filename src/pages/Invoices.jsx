@@ -1,21 +1,25 @@
 import { useState, useEffect } from "react";
 import { Plus, X, Search } from "lucide-react";
 import { BASE_URL } from "../api/BaseUrl";
+import { useNotifications } from "../contexts/NotificationsContext.jsx";
 
 export default function Invoices() {
+  const { addNotification } = useNotifications();
+  
   const [invoices, setInvoices] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [taxReturns, setTaxReturns] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [showLineItem, setShowLineItem] = useState(false);
   const [apiLoading, setApiLoading] = useState({
     invoices: false,
     customers: false,
     taxReturns: false,
-    createInvoice: false
+    createInvoice: false,
   });
 
-  const filteredInvoices = invoices.filter(inv => {
+  const filteredInvoices = invoices.filter((inv) => {
     const q = searchQuery.toLowerCase();
     return (
       inv.id.toString().includes(q) ||
@@ -34,7 +38,7 @@ export default function Invoices() {
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [selectedReturn, setSelectedReturn] = useState(null);
   const [invoiceType, setInvoiceType] = useState(null);
-
+  const userToken = localStorage.getItem("token");
   const loginId = localStorage.getItem("loginId");
   const role = localStorage.getItem("role");
   // Search
@@ -44,9 +48,10 @@ export default function Invoices() {
   const [invoiceData, setInvoiceData] = useState({
     customer_id: "",
     return_id: "",
-    line_items: [{ description: "", hours: 1, rate: 0, amount: 0 }],
+    line_items: [{ description: "", hours: 0, rate: 0, amount: 0 }],
     no_of_hours: 0,
-    updated_by_id: localStorage.getItem("createdby_id") || "",
+
+    // updated_by_id: localStorage.getItem("createdby_id") || "",
     status: "pending",
     due_date: "",
     createdby_type: role || "",
@@ -58,32 +63,47 @@ export default function Invoices() {
   }, []);
 
   const setLoadingState = (key, value) => {
-    setApiLoading(prev => ({ ...prev, [key]: value }));
+    setApiLoading((prev) => ({ ...prev, [key]: value }));
   };
 
   const loadCustomers = async () => {
     try {
-      setLoadingState('customers', true);
-      const response = await fetch(`${BASE_URL}/api/allCustomers`);
+      setLoadingState("customers", true);
+      const response = await fetch(`${BASE_URL}/api/allCustomers`, {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${userToken}`,
+        },
+      });
       const data = await response.json();
       setCustomers(data.users);
     } catch (error) {
       console.error("Error loading customers:", error);
+      addNotification({
+  title: "Status",
+  body: `${error}`,
+  level: "error",
+});
     } finally {
-      setLoadingState('customers', false);
+      setLoadingState("customers", false);
     }
   };
 
   const loadInvoices = async () => {
     try {
-      setLoadingState('invoices', true);
-      const response = await fetch(`${BASE_URL}/api/getAllInvoices`);
+      setLoadingState("invoices", true);
+      const response = await fetch(`${BASE_URL}/api/getAllInvoices`, {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${userToken}`,
+        },
+      });
       const data = await response.json();
       setInvoices(data || []);
     } catch (error) {
       console.error("Error loading invoices:", error);
     } finally {
-      setLoadingState('invoices', false);
+      setLoadingState("invoices", false);
       setIsLoading(false);
     }
   };
@@ -94,22 +114,29 @@ export default function Invoices() {
       if (!selectedCustomer) return;
 
       try {
-        setLoadingState('taxReturns', true);
+        setLoadingState("taxReturns", true);
         const response = await fetch(
-          `${BASE_URL}/api/tax-returns/${selectedCustomer.customerId}`
+          `${BASE_URL}/api/tax-returns/${selectedCustomer.customerId}`,
+          {
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${userToken}`,
+            },
+          }
         );
         const data = await response.json();
         setTaxReturns(data);
       } catch (error) {
         console.error("Error fetching returns:", error);
       } finally {
-        setLoadingState('taxReturns', false);
+        setLoadingState("taxReturns", false);
       }
     };
     fetchCustomerReturns();
   }, [selectedCustomer]);
 
   const addLineItem = () => {
+    setShowLineItem(true);
     setInvoiceData((prev) => ({
       ...prev,
       line_items: [
@@ -142,13 +169,13 @@ export default function Invoices() {
     setInvoiceData((prev) => ({
       ...prev,
       line_items: updatedLineItems,
-      no_of_hours:
-        invoiceType === "hourly"
-          ? updatedLineItems.reduce(
-              (sum, item) => sum + (Number(item.hours) || 0),
-              0
-            )
-          : 0,
+      // no_of_hours:
+      //   invoiceType === "hourly"
+      //     ? updatedLineItems.reduce(
+      //         (sum, item) => sum + (Number(item.hours) || 0),
+      //         0
+      //       )
+      //     : 0,
     }));
   };
 
@@ -172,49 +199,130 @@ export default function Invoices() {
     setInvoiceData((prev) => ({
       ...prev,
       return_id: returnItem.id,
-      line_items:
-        returnItem.pricing_type === "hourly"
-          ? [
-              {
-                description: `Tax preparation for ${returnItem.return_type}`,
-                hours: 1,
-                rate: returnItem.price || 0,
-                amount: returnItem.price || 0,
-              },
-            ]
-          : [
-              {
-                description: `Tax preparation for ${returnItem.return_type}`,
-                amount: returnItem.price || 0,
-              },
-            ],
+      line_items: [],
+      // returnItem.pricing_type === "hourly"
+      //   ? [
+      //       {
+      //         description: `Tax preparation for ${returnItem.return_type}`,
+      //         hours: 1,
+      //         rate: returnItem.price || 0,
+      //         amount: returnItem.price || 0,
+      //       },
+      //     ]
+      //   : [
+      //       {
+      //         description: `Tax preparation for ${returnItem.return_type}`,
+      //         amount: returnItem.price || 0,
+      //       },
+      //     ],
     }));
   };
+
+  // const handleCreateInvoice = async (e) => {
+  //   e.preventDefault();
+  //   try {
+  //     setLoadingState('createInvoice', true);
+  //     const response = await fetch(
+  //       `${BASE_URL}/api/create-invoice`,
+  //       {
+  //         method: "POST",
+  //         headers: { "Content-Type": "application/json" ,"Authorization": `Bearer ${userToken}`},
+  //         body: JSON.stringify(invoiceData),
+
+  //       }
+  //     );
+
+  //     if (response.ok) {
+  //       alert("Invoice created successfully!");
+  //       setShowCreateModal(false);
+  //       setSelectedCustomer(null);
+  //       setSelectedReturn(null);
+  //       setInvoiceData({
+  //         customer_id: "",
+  //         return_id: "",
+  //         line_items: [{ description: "", hours: 1, rate: 0, amount: 0 }],
+  //         no_of_hours: 0,
+  //         updated_by_id: localStorage.getItem("createdby_id") || "",
+  //         status: "pending",
+  //         due_date: "",
+  //         createdby_type: role || "",
+  //         createdby_id: loginId || "",
+  //       });
+  //       loadInvoices();
+  //     } else {
+  //       alert("Failed to create invoice");
+  //     }
+  //   } catch (error) {
+  //     console.error("Error creating invoice:", error);
+  //     alert("Error creating invoice");
+  //   } finally {
+  //     setLoadingState('createInvoice', false);
+  //   }
+  // };
 
   const handleCreateInvoice = async (e) => {
     e.preventDefault();
     try {
-      setLoadingState('createInvoice', true);
-      const response = await fetch(
-        `${BASE_URL}/api/create-invoice`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(invoiceData),
-        }
-      );
+      setLoadingState("createInvoice", true);
+
+      let payload;
+      if (invoiceType === "hourly") {
+        payload = {
+          customer_id: invoiceData.customer_id,
+          return_id: invoiceData.return_id,
+          line_items: invoiceData.line_items.map((item) => ({
+            description: item.description,
+            hours: Number(item.hours) || 0,
+            rate: Number(item.rate) || 0,
+            amount: Number(item.amount) || 0,
+          })),
+          no_of_hours: invoiceData.no_of_hours,
+          updated_by_id: loginId,
+          status: invoiceData.status,
+          due_date: invoiceData.due_date,
+          createdby_type: role,
+          createdby_id: loginId,
+        };
+      } else if (invoiceType === "lumpsum") {
+        payload = {
+          customer_id: invoiceData.customer_id,
+          return_id: invoiceData.return_id,
+          line_items: invoiceData.line_items.map((item) => ({
+            description: item.description,
+            amount: Number(item.amount) || 0,
+          })),
+          updated_by_id: loginId,
+          status: invoiceData.status,
+          due_date: invoiceData.due_date,
+          createdby_type: role,
+          createdby_id: loginId,
+        };
+      }
+
+      const response = await fetch(`${BASE_URL}/api/create-invoice`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${userToken}`,
+        },
+        body: JSON.stringify(payload),
+      });
 
       if (response.ok) {
-        alert("Invoice created successfully!");
+        // alert("Invoice created successfully!");
+         addNotification({
+  title: "Status",
+  body: `${response?.message|| 'invoice created successfully'}`,
+  level: "success",
+});
         setShowCreateModal(false);
         setSelectedCustomer(null);
         setSelectedReturn(null);
         setInvoiceData({
           customer_id: "",
           return_id: "",
-          line_items: [{ description: "", hours: 1, rate: 0, amount: 0 }],
+          line_items: [],
           no_of_hours: 0,
-          updated_by_id: localStorage.getItem("createdby_id") || "",
           status: "pending",
           due_date: "",
           createdby_type: role || "",
@@ -222,13 +330,23 @@ export default function Invoices() {
         });
         loadInvoices();
       } else {
-        alert("Failed to create invoice");
+        // alert("Failed to create invoice");
+          addNotification({
+  title: "Status",
+  body: `${response?.error|| 'error failed to create  '}`,
+  level: "error",
+});
       }
     } catch (error) {
       console.error("Error creating invoice:", error);
-      alert("Error creating invoice");
+      // alert("Error creating invoice");
+      addNotification({
+  title: "Status",
+  body: `${response.error}`,
+  level: "error",
+});
     } finally {
-      setLoadingState('createInvoice', false);
+      setLoadingState("createInvoice", false);
     }
   };
 
@@ -254,7 +372,7 @@ export default function Invoices() {
   );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 ml-5">
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Invoices</h1>
@@ -274,7 +392,7 @@ export default function Invoices() {
           Create Invoice
         </button>
       </div>
-      
+
       {/* Invoices Table */}
       <div className="overflow-x-auto rounded-xl shadow-sm border border-gray-200">
         <div className="flex justify-between items-center mb-4 p-4">
@@ -282,7 +400,7 @@ export default function Invoices() {
             type="text"
             placeholder="Search invoices..."
             value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
+            onChange={(e) => setSearchQuery(e.target.value)}
             className="border border-gray-300 rounded-lg px-4 py-2 w-72 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           />
         </div>
@@ -328,9 +446,11 @@ export default function Invoices() {
                     }`}
                   >
                     <td className="px-4 py-3 text-gray-800 font-medium">
-                      {idx+1}
+                      {idx + 1}
                     </td>
-                    <td className="px-4 py-3 text-gray-700">{inv.customer_name}</td>
+                    <td className="px-4 py-3 text-gray-700">
+                      {inv.customer_name}
+                    </td>
                     <td className="px-4 py-3 text-gray-700">{inv.return_id}</td>
                     <td className="px-4 py-3 font-semibold text-gray-900">
                       {formatCurrency(inv.invoice_amount)}
@@ -420,7 +540,9 @@ export default function Invoices() {
                         onClick={() => handleCustomerSelect(c)}
                       >
                         <h4 className="font-medium">{c.customerName}</h4>
-                        <p className="text-sm text-gray-600">{c.customerEmail}</p>
+                        <p className="text-sm text-gray-600">
+                          {c.customerEmail}
+                        </p>
                       </div>
                     ))}
                   </div>
@@ -501,7 +623,26 @@ export default function Invoices() {
                     )
                   </h3>
 
+                  {invoiceType === "hourly" && (
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium mb-1">
+                        Number of Hours
+                      </label>
+                      <input
+                        type="number"
+                        className="border p-2 rounded w-full"
+                        value={invoiceData.no_of_hours || ""}
+                        onChange={(e) =>
+                          setInvoiceData((prev) => ({
+                            ...prev,
+                            no_of_hours: Number(e.target.value) || 0,
+                          }))
+                        }
+                      />
+                    </div>
+                  )}
                   {/* Line Items */}
+                  
                   <div>
                     <div className="flex justify-between items-center mb-2">
                       <span className="font-medium">Line Items</span>
@@ -513,8 +654,9 @@ export default function Invoices() {
                         + Add Item
                       </button>
                     </div>
-                    {invoiceData.line_items.map((item, i) => (
-                      <div key={i} className="grid grid-cols-12 gap-2 mb-2">
+
+                    {invoiceData.line_items.map((item, index) => (
+                      <div key={index} className="grid grid-cols-12 gap-2 mb-2">
                         <input
                           type="text"
                           className="col-span-5 border p-2 rounded"
@@ -522,34 +664,44 @@ export default function Invoices() {
                           value={item.description}
                           onChange={(e) =>
                             handleLineItemChange(
-                              i,
+                              index,
                               "description",
                               e.target.value
                             )
                           }
                         />
+
                         {invoiceType === "hourly" && (
                           <>
                             <input
                               type="number"
                               className="col-span-2 border p-2 rounded"
                               placeholder="Hours"
-                              value={item.hours}
+                              value={item.hours || ""}
                               onChange={(e) =>
-                                handleLineItemChange(i, "hours", e.target.value)
+                                handleLineItemChange(
+                                  index,
+                                  "hours",
+                                  e.target.value
+                                )
                               }
                             />
                             <input
                               type="number"
                               className="col-span-2 border p-2 rounded"
                               placeholder="Rate"
-                              value={item.rate}
+                              value={item.rate || ""}
                               onChange={(e) =>
-                                handleLineItemChange(i, "rate", e.target.value)
+                                handleLineItemChange(
+                                  index,
+                                  "rate",
+                                  e.target.value
+                                )
                               }
                             />
                           </>
                         )}
+
                         <input
                           type="number"
                           className={
@@ -558,15 +710,20 @@ export default function Invoices() {
                               : "col-span-5 border p-2 rounded"
                           }
                           placeholder="Amount"
-                          value={item.amount}
+                          value={item.amount || ""}
                           onChange={(e) =>
-                            handleLineItemChange(i, "amount", e.target.value)
+                            handleLineItemChange(
+                              index,
+                              "amount",
+                              e.target.value
+                            )
                           }
                         />
+
                         <button
                           type="button"
                           className="col-span-1 text-red-600"
-                          onClick={() => removeLineItem(i)}
+                          onClick={() => removeLineItem(index)}
                         >
                           ×
                         </button>

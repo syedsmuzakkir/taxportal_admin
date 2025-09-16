@@ -72,8 +72,16 @@ export const authAPI = {
       }
 
       const data = await response.json();
+      // console.log(data)
       localStorage.setItem("loginId", data.user.id.toString());
       localStorage.setItem("role", data.user.role.toString());
+      localStorage.setItem("token", data.token.toString());
+
+  
+
+
+      
+
       let loginId = localStorage.getItem("loginId");
       
       // console.log(loginId)

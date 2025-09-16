@@ -8,26 +8,29 @@ export default function Overview() {
   const [returns, setReturns] = useState([]);
   const [invoices, setInvoices] = useState([]);
   const [activities, setActivities] = useState([]);
-const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
 
-  // Fetch dashboard data from API
+  const userToken = localStorage.getItem('token');
+
+  // Fetch dashboard data
   const fetchDashboardData = async () => {
     try {
-      const res = await fetch(`${BASE_URL}/api/admin/getdashboard-data`);
+      const res = await fetch(`${BASE_URL}/api/admin/getdashboard-data`, {
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${userToken}`,
+        },
+      });
       const data = await res.json();
       setReturns(data.returns);
       setInvoices(data.invoices);
 
-      // --- Returns stats ---
-  // --- Returns stats (dynamic) ---
-const returnsByStatus = data.returns.reduce((acc, ret) => {
-  const key = ret.return_status.trim().toLowerCase();
-  acc[key] = (acc[key] || 0) + 1;
-  return acc;
-}, {});
+      const returnsByStatus = data.returns.reduce((acc, ret) => {
+        const key = ret.return_status.trim().toLowerCase();
+        acc[key] = (acc[key] || 0) + 1;
+        return acc;
+      }, {});
 
-
-      // --- Invoice stats ---
       const totalInvoiceAmount = data.invoices.reduce(
         (sum, inv) => sum + parseFloat(inv.invoice_amount || 0),
         0
@@ -50,33 +53,44 @@ const returnsByStatus = data.returns.reduce((acc, ret) => {
       );
 
       setStats({
-  totalCustomers: data.total_customers,
-  totalReturns: data.returns.length,
-  returnsByStatus, // keep all statuses dynamically
-  totalInvoices: data.invoices.length,
-  pendingInvoices: pendingInvoices.length,
-  paidInvoices: paidInvoices.length,
-  totalInvoiceAmount,
-  pendingAmount,
-  paidAmount,
-});
-
+        totalCustomers: data.total_customers,
+        totalReturns: data.returns.length,
+        returnsByStatus,
+        totalInvoices: data.invoices.length,
+        pendingInvoices: pendingInvoices.length,
+        paidInvoices: paidInvoices.length,
+        totalInvoiceAmount,
+        pendingAmount,
+        paidAmount,
+      });
     } catch (err) {
       console.error('Failed to fetch dashboard data:', err);
     }
   };
 
-  useEffect(() => {
-    // fetchDashboardData();
-     const loadData = async () => {
-    setLoading(true);
-    await Promise.all([fetchDashboardData(), fetchActivities()]);
-    setLoading(false);
+  const fetchActivities = async () => {
+    try {
+      const res = await fetch(`${BASE_URL}/api/getAllActivties`, {
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${userToken}`,
+        }
+      });
+      const data = await res.json();
+      setActivities(data);
+    } catch (err) {
+      console.error('Failed to fetch activities:', err);
+    }
   };
-  loadData();
+
+  useEffect(() => {
+    const loadData = async () => {
+      setLoading(true);
+      await Promise.all([fetchDashboardData(), fetchActivities()]);
+      setLoading(false);
+    };
+    loadData();
   }, []);
-
-
 
   const statCards = [
     {
@@ -110,20 +124,6 @@ const returnsByStatus = data.returns.reduce((acc, ret) => {
     },
   ];
 
-  // Fetch activities
-  const fetchActivities = async () => {
-    try {
-      const res = await fetch(`${BASE_URL}/api/getAllActivties`);
-      const data = await res.json();
-      setActivities(data);
-    } catch (err) {
-      console.error('Failed to fetch activities:', err);
-    }
-  };
-
-  
-
-  // Tab filter logic
   const filteredActivities = activities.filter((a) => {
     const c = a.comment.toLowerCase();
     if (activeTab === 'all') return true;
@@ -135,24 +135,24 @@ const returnsByStatus = data.returns.reduce((acc, ret) => {
     return true;
   });
 
-  // Format date
   const formatDate = (dateStr) => {
     const d = new Date(dateStr);
     return d.toLocaleString();
   };
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-white-50 to-white-0">
+        <div className="animate-spin rounded-full h-12 w-12 border-4 border-indigo-500 border-t-transparent"></div>
+      </div>
+    );
+  }
 
-    if (loading) {
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-50">
-      <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent"></div>
-      {/* <span className="ml-3 text-gray-600 font-medium">Loading dashboard...</span> */}
-    </div>
-  );
-}
-  return (
-    <div className="space-y-6 p-6 bg-gray-50 min-h-screen">
-      <h1 className="text-2xl font-bold text-gray-900">Dashboard Overview</h1>
+    <div className="space-y-8 p-8 bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen">
+      <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">
+        Dashboard Overview
+      </h1>
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -162,23 +162,23 @@ const returnsByStatus = data.returns.reduce((acc, ret) => {
           return (
             <div
               key={card.title}
-              className="bg-white rounded-lg shadow-sm border border-gray-200 p-6"
+              className="bg-white rounded-2xl shadow-md border border-gray-100 p-6 hover:shadow-xl transition transform hover:-translate-y-1"
             >
               <div className="flex items-center justify-between">
                 <div className="flex-1">
-                  <p className="text-sm text-gray-600">{card.title}</p>
-                  <p className="text-2xl font-bold text-gray-900 mt-1">
+                  <p className="text-sm font-medium text-gray-500">{card.title}</p>
+                  <p className="text-3xl font-bold text-gray-900 mt-1">
                     {card.value}
                   </p>
                   {card.subtitle && (
-                    <p className="text-sm text-gray-500 mt-2">{card.subtitle}</p>
+                    <p className="text-sm text-gray-400 mt-1">{card.subtitle}</p>
                   )}
                   {TrendIcon && (
-                    <TrendIcon className={`w-4 h-4 mt-1 ${card.trendColor}`} />
+                    <TrendIcon className={`w-4 h-4 mt-2 ${card.trendColor}`} />
                   )}
                 </div>
-                <div className={`p-3 rounded-full bg-${card.color}-100`}>
-                  <IconComponent className={`w-6 h-6 text-${card.color}-600`} />
+                <div className={`p-4 rounded-xl bg-${card.color}-50`}>
+                  <IconComponent className={`w-7 h-7 text-${card.color}-600`} />
                 </div>
               </div>
             </div>
@@ -187,67 +187,63 @@ const returnsByStatus = data.returns.reduce((acc, ret) => {
       </div>
 
       {/* Returns Summary */}
-    {/* Returns Summary */}
-<div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-  <h2 className="text-lg font-medium text-gray-900 mb-4">
-    Tax Returns Summary
-  </h2>
-  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-    {/* Always show total */}
-    <div className="text-center">
-      <div className="text-2xl font-bold text-gray-900">
-        {stats.totalReturns || 0}
-      </div>
-      <div className="text-sm text-gray-600">Total Returns</div>
-    </div>
+      <div className="bg-white rounded-2xl shadow-md border border-gray-100 p-6">
+        <h2 className="text-lg font-semibold text-gray-900 mb-6">
+          Tax Returns Summary
+        </h2>
+        <div className="grid grid-cols-7 md:grid-cols-7  gap-6">
+          <div className="text-center bg-gray-50 rounded-xl p-5 shadow-sm">
+            <div className="text-3xl font-bold text-gray-900">
+              {stats.totalReturns || 0}
+            </div>
+            <div className="text-sm text-gray-500">Total Returns</div>
+          </div>
 
-    {/* Loop through dynamic statuses */}
-    {stats.returnsByStatus &&
-      Object.entries(stats.returnsByStatus).map(([status, count]) => (
-        <div key={status} className="text-center">
-          <div
-            className={`text-2xl font-bold ${
-              status.includes('filed')
-                ? 'text-green-600'
-                : status.includes('review')
-                ? 'text-yellow-600'
-                : status.includes('preparation')
-                ? 'text-blue-600'
-                : status.includes('document')
-                ? 'text-indigo-600'
-                : 'text-gray-600'
-            }`}
-          >
-            {count}
-          </div>
-          <div className="text-sm text-gray-600 capitalize">
-            {status}
-          </div>
+          {stats.returnsByStatus &&
+            Object.entries(stats.returnsByStatus).map(([status, count]) => (
+              <div key={status} className="text-center bg-gray-50 rounded-xl p-5 shadow-sm">
+                <div
+                  className={`text-3xl font-bold ${
+                    status.includes('filed')
+                      ? 'text-green-600'
+                      : status.includes('review')
+                      ? 'text-yellow-600'
+                      : status.includes('preparation')
+                      ? 'text-blue-600'
+                      : status.includes('document')
+                      ? 'text-indigo-600'
+                      : 'text-gray-600'
+                  }`}
+                >
+                  {count}
+                </div>
+                <div className="text-sm text-gray-500 capitalize">
+                  {status}
+                </div>
+              </div>
+            ))}
         </div>
-      ))}
-  </div>
-</div>
-
+      </div>
 
       {/* Recent Activities */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-medium text-gray-900">
+      <div className="bg-white rounded-2xl shadow-md border border-gray-100 p-6">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-lg font-semibold text-gray-900">
             Recent Activities
           </h2>
         </div>
 
         {/* Tab Navigation */}
-        <div className="border-b border-gray-200 mb-4">
-          <nav className="-mb-px flex space-x-8">
+        <div className="border-b border-gray-200 mb-6">
+          <nav className="flex space-x-6">
             {['all', 'comments', 'status change', 'uploaded document'].map(
               (tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                  className={`py-2 px-2 border-b-2 font-medium text-sm transition ${
                     activeTab === tab
-                      ? 'border-blue-500 text-blue-600'
+                      ? 'border-indigo-500 text-indigo-600'
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                   }`}
                 >
@@ -259,18 +255,22 @@ const returnsByStatus = data.returns.reduce((acc, ret) => {
         </div>
 
         {/* Activities List */}
-        <div className="space-y-4 max-h-80 overflow-y-auto">
+        <div className="space-y-4 max-h-80 overflow-y-auto pr-2 custom-scroll">
           {filteredActivities.map((a, i) => (
-            <div key={i} className="p-3 border-b border-gray-100 last:border-b-0">
+            <div
+              key={i}
+              className="p-4 bg-gray-50 rounded-lg shadow-sm border border-gray-100 hover:bg-gray-100 transition"
+            >
               <p className="text-sm text-gray-900">{a.comment}</p>
-              <p className="text-xs text-gray-500">
-                by {a.name} ({a.email}) • {formatDate(a.created_at)}
+              <p className="text-xs text-gray-500 mt-1">
+                by <span className="font-medium">{a.name}</span> ({a.email}) •{' '}
+                {formatDate(a.created_at)}
               </p>
             </div>
           ))}
 
           {filteredActivities.length === 0 && (
-            <div className="text-center py-4 text-gray-500">
+            <div className="text-center py-6 text-gray-500 italic">
               No activities found for this filter
             </div>
           )}
@@ -279,3 +279,4 @@ const returnsByStatus = data.returns.reduce((acc, ret) => {
     </div>
   );
 }
+
