@@ -4,8 +4,10 @@ import { useAuth } from '../contexts/AuthContext.jsx';
 import { usePermissions } from '../contexts/PermissionsContext.jsx';
 
 export default function ProtectedRoute({ children, permission, context = {} }) {
-  const { isAuthenticated, twoFAValidated, requires2FA, isLoading } = useAuth();
-  const { can } = usePermissions();
+  const { isAuthenticated, twoFAValidated, requires2FA, isLoading: authLoading } = useAuth();
+  const { can, isLoading: permissionsLoading } = usePermissions(); // add isLoading in PermissionsContext
+
+  const isLoading = authLoading || permissionsLoading;
 
   if (isLoading) {
     return (

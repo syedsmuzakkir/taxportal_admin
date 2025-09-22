@@ -22,7 +22,6 @@ import NotFound from './pages/NotFound.jsx';
 import { ToastContainer } from "react-toastify";
 function App() {
   return (
-    
     <Router>
       <ToastContainer position="top-right" autoClose={4000} />
       <AuthProvider>
@@ -39,7 +38,7 @@ function App() {
                   <Route 
                     path="overview" 
                     element={
-                      <ProtectedRoute permission="page:overview">
+                      <ProtectedRoute permission="overview">
                         <Overview />
                       </ProtectedRoute>
                     } 
@@ -47,7 +46,7 @@ function App() {
                   <Route 
                     path="customers" 
                     element={
-                      <ProtectedRoute permission="page:customers">
+                      <ProtectedRoute permission="customers">
                         <Customers />
                       </ProtectedRoute>
                     } 
@@ -55,7 +54,7 @@ function App() {
                   <Route 
                     path="customers/:id" 
                     element={
-                      <ProtectedRoute permission="page:customers">
+                      <ProtectedRoute permission="customers">
                         <CustomerDetail />
                       </ProtectedRoute>
                     } 
@@ -63,7 +62,7 @@ function App() {
                   <Route 
                     path="users-management" 
                     element={
-                      <ProtectedRoute permission="page:users_management">
+                      <ProtectedRoute permission="users_management">
                         <UsersManagement />
                       </ProtectedRoute>
                     } 
@@ -72,7 +71,7 @@ function App() {
                   <Route 
                     path="tax-returns" 
                     element={
-                      <ProtectedRoute permission="page:tax_returns">
+                      <ProtectedRoute permission="tax-returns">
                         <TaxReturns />
                       </ProtectedRoute>
                     } 
@@ -80,7 +79,7 @@ function App() {
                   <Route 
                     path="tax-returns/status/:status" 
                     element={
-                      <ProtectedRoute permission="page:tax_returns">
+                      <ProtectedRoute permission="tax-returns">
                         <TaxReturns />
                       </ProtectedRoute>
                     } 
@@ -88,7 +87,7 @@ function App() {
                   <Route 
                     path="documents/:id" 
                     element={
-                      <ProtectedRoute permission="page:customers">
+                      <ProtectedRoute permission="customers">
                         <DocumentView />
                       </ProtectedRoute>
                     } 
@@ -96,7 +95,7 @@ function App() {
                   <Route 
                     path="invoices" 
                     element={
-                      <ProtectedRoute permission="page:invoices">
+                      <ProtectedRoute permission="invoices">
                         <Invoices />
                       </ProtectedRoute>
                     } 
@@ -104,7 +103,7 @@ function App() {
                   <Route 
                     path="payments" 
                     element={
-                      <ProtectedRoute permission="page:payments">
+                      <ProtectedRoute permission="payments">
                         <Payments />
                       </ProtectedRoute>
                     } 
@@ -112,7 +111,7 @@ function App() {
                   <Route 
                     path="settings" 
                     element={
-                      <ProtectedRoute permission="page:settings">
+                      <ProtectedRoute permission="settings">
                         <Settings />
                       </ProtectedRoute>
                     } 

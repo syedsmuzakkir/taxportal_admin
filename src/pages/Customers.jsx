@@ -5,7 +5,7 @@ import { useAuth } from '../contexts/AuthContext.jsx';
 import { usePermissions } from '../contexts/PermissionsContext.jsx';
 import { useNotifications } from '../contexts/NotificationsContext.jsx';
 import { customersAPI } from '../api/customers.js';
-import { Search, Plus, Edit, Trash2, FileText, Eye, Users } from 'lucide-react';
+import { Search, Plus, Edit, Trash2, FileText, Eye, Users, Check, X } from 'lucide-react';
 import Modal from '../components/Modal.jsx';
 import {BASE_URL} from '../api/BaseUrl.js';
 
@@ -27,22 +27,35 @@ export default function Customers() {
     role: 'individual',
   });
 
+  // Assign Returns Modal States
+  const [showAssignModal, setShowAssignModal] = useState(false);
+  const [currentCustomerId, setCurrentCustomerId] = useState(null);
+  const [currentCustomerName, setCurrentCustomerName] = useState('');
+  const [allUsers, setAllUsers] = useState([]);
+  const [customerReturns, setCustomerReturns] = useState([]);
+  const [selectedUserId, setSelectedUserId] = useState('');
+  const [selectedReturnIds, setSelectedReturnIds] = useState([]);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
+  const [isLoadingReturns, setIsLoadingReturns] = useState(false);
+  const [isAssigning, setIsAssigning] = useState(false);
+  const [returnsError, setReturnsError] = useState('');
+
   useEffect(() => {
     loadCustomers();
   }, [contextCustomers]);
 
   const userToken = localStorage.getItem('token')
+
   const loadCustomers = async () => {
     try {
       setIsLoading(true);
-      // Fetch customers from the new API endpoint
       const response = await fetch(`${BASE_URL}/api/allCustomers`,{
-      headers: {
-        "Content-Type": "application/json",
-        "ngrok-skip-browser-warning": "true",
-        "Authorization": `Bearer ${userToken}`
-      },
-    });
+        headers: {
+          "Content-Type": "application/json",
+          "ngrok-skip-browser-warning": "true",
+          "Authorization": `Bearer ${userToken}`
+        },
+      });
       const data = await response.json();
       
       let allCustomers = data.users.map(user => ({
@@ -52,7 +65,6 @@ export default function Customers() {
         mobile: user.customerPhone || '',
         documentsCount: user.totalDocuments || 0,
         returnsCount: user.totalReturns || 0,
-        // Convert boolean status to string for UI
         status: user.status ? 'Active' : 'Inactive',
         taxReturnId: user.taxReturnId || null,
         taxReturnName: user.taxReturnName || null,
@@ -60,48 +72,212 @@ export default function Customers() {
         statusLog: user.statusLog || [],
         createdAt: user.createdAt || new Date().toISOString(),
         modifiedAt: user.modifiedAt || new Date().toISOString(),
-        role:user.role
+        role: user.role
       }));
       
-      // Filter for clients - they can only see their own data
       if (user?.role === 'client') {
         allCustomers = allCustomers.filter(c => c.ownerId === user.id);
       }
       
       setCustomers(allCustomers);
     } catch (error) {
-      // console.error('Error loading customers:', error);
+      console.error('Error loading customers:', error);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleStatusChange = async (customerId, newStatus, customerName ,role) => {
+  const handleAssignReturns = async (customerId, customerName) => {
+    setCurrentCustomerId(customerId);
+    setCurrentCustomerName(customerName);
+    setShowAssignModal(true);
+    setSelectedUserId('');
+    setSelectedReturnIds([]);
+    setCustomerReturns([]); // Clear previous returns
+    setReturnsError(''); // Clear previous errors
+    
+    // Load users and returns for this customer
+    await loadAllUsers();
+    await loadCustomerReturns(customerId);
+  };
+
+  const loadAllUsers = async () => {
+    try {
+      setIsLoadingUsers(true);
+      const response = await fetch(`${BASE_URL}/api/allUsers`, {
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${userToken}`
+        },
+      });
+      
+      if (!response.ok) throw new Error('Failed to fetch users');
+      
+      const data = await response.json();
+      // Filter out client users if needed, or show all
+      const filteredUsers = data.filter(user => user.role !== 'client');
+      setAllUsers(filteredUsers || []);
+    } catch (error) {
+      console.error('Error loading users:', error);
+      addNotification({
+        title: 'Error',
+        body: 'Failed to load users',
+        level: 'error'
+      });
+    } finally {
+      setIsLoadingUsers(false);
+    }
+  };
+
+  const loadCustomerReturns = async (customerId) => {
+    try {
+      setIsLoadingReturns(true);
+      setReturnsError(''); // Clear any previous errors
+      const response = await fetch(`${BASE_URL}/api/tax-returns/${customerId}`, {
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${userToken}`
+        },
+      });
+      
+      if (!response.ok) {
+        // If response is not ok, try to parse error message
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Failed to fetch returns: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      // Check if the response contains an error message
+      if (data && data.error) {
+        setReturnsError(data.error);
+        setCustomerReturns([]);
+      } else if (Array.isArray(data)) {
+        setCustomerReturns(data);
+        setReturnsError('');
+      } else {
+        setReturnsError('Invalid response format');
+        setCustomerReturns([]);
+      }
+    } catch (error) {
+      console.error('Error loading returns:', error);
+      setReturnsError(error.message);
+      setCustomerReturns([]);
+    } finally {
+      setIsLoadingReturns(false);
+    }
+  };
+
+  const handleReturnSelection = (returnId) => {
+    setSelectedReturnIds(prev => {
+      if (prev.includes(returnId)) {
+        return prev.filter(id => id !== returnId);
+      } else {
+        return [...prev, returnId];
+      }
+    });
+  };
+
+  const handleSelectAllReturns = () => {
+    if (selectedReturnIds.length === customerReturns.length) {
+      setSelectedReturnIds([]);
+    } else {
+      const allReturnIds = customerReturns.map(returnItem => returnItem.id).filter(Boolean);
+      setSelectedReturnIds(allReturnIds);
+    }
+  };
+
+  const assignReturnsToUser = async () => {
+    if (!selectedUserId) {
+      addNotification({
+        title: 'Validation Error',
+        body: 'Please select a user',
+        level: 'error'
+      });
+      return;
+    }
+
+    if (selectedReturnIds.length === 0) {
+      addNotification({
+        title: 'Validation Error',
+        body: 'Please select at least one return',
+        level: 'error'
+      });
+      return;
+    }
+
+    try {
+      setIsAssigning(true);
+      
+      const payload = {
+        user_id: parseInt(selectedUserId),
+        return_ids: selectedReturnIds.map(id => parseInt(id))
+      };
+
+      const response = await fetch(`${BASE_URL}/api/assign-returns`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          "Authorization": `Bearer ${userToken}`
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to assign returns');
+      }
+
+      const data = await response.json();
+      
+      addNotification({
+        title: 'Success',
+        body: `Successfully assigned ${selectedReturnIds.length} returns to user`,
+        level: 'success'
+      });
+
+      // Close modal and reset state
+      setShowAssignModal(false);
+      setSelectedUserId('');
+      setSelectedReturnIds([]);
+      setCustomerReturns([]);
+      setReturnsError('');
+      
+      // Refresh customers to reflect changes
+      loadCustomers();
+
+    } catch (error) {
+      console.error('Error assigning returns:', error);
+      addNotification({
+        title: 'Assignment Failed',
+        body: 'Failed to assign returns to user',
+        level: 'error'
+      });
+    } finally {
+      setIsAssigning(false);
+    }
+  };
+
+  const handleStatusChange = async (customerId, newStatus, customerName, role) => {
     try {
       setEditingStatus({ ...editingStatus, [customerId]: true });
       
-      // Convert string status back to boolean for API
       const statusBoolean = newStatus === 'Active';
       
-      // console.log(role, 'this is type')
-      // console.log(customerName, 'this is name')
-      // Update customer status via API
       const response = await fetch(`${BASE_URL}/api/changeCustomerStatus/${customerId}`, {
-  method: 'PATCH',
-  mode: 'cors', // Explicitly set CORS mode
-  headers: {
-    "ngrok-skip-browser-warning": "true",
-    'Content-Type': 'application/json',
-    "Authorization": `Bearer ${userToken}`
-  },
-  body: JSON.stringify({ 'status': statusBoolean }),
-});
+        method: 'PATCH',
+        mode: 'cors',
+        headers: {
+          "ngrok-skip-browser-warning": "true",
+          'Content-Type': 'application/json',
+          "Authorization": `Bearer ${userToken}`
+        },
+        body: JSON.stringify({ 'status': statusBoolean }),
+      });
       
       if (!response.ok) {
         throw new Error('Failed to update status');
       }
       
-      // Update local state
       const updatedCustomers = customers.map(c => 
         c.id === customerId ? {...c, status: newStatus} : c
       );
@@ -109,7 +285,6 @@ export default function Customers() {
       setCustomers(updatedCustomers);
       updateCustomers(updatedCustomers);
 
-      // Add activity
       addActivity({
         user: user.name,
         action: `Updated status to ${newStatus} for ${customerName}`,
@@ -125,7 +300,7 @@ export default function Customers() {
       });
 
     } catch (error) {
-      // console.error('Error updating status:', error);
+      console.error('Error updating status:', error);
       addNotification({
         title: 'Status Update Failed',
         body: `Failed to update status for ${customerName}`,
@@ -165,7 +340,6 @@ export default function Customers() {
         throw new Error(data.error || "Registration failed");
       }
 
-      // Success flow
       const createdCustomer = data;
 
       const updatedCustomers = [...customers, {
@@ -175,8 +349,7 @@ export default function Customers() {
         mobile: createdCustomer.phone || createdCustomer.mobile || '',
         documentsCount: 0,
         returnsCount: 0,
-        status: 'Active', // Default status for new customers
-        
+        status: 'Active',
       }];
       
       setCustomers(updatedCustomers);
@@ -206,7 +379,7 @@ export default function Customers() {
       setShowCreateModal(false);
 
     } catch (error) {
-      // console.error("Error creating customer:", error.message);
+      console.error("Error creating customer:", error.message);
 
       await addNotification({
         title: "Customer Creation Failed",
@@ -219,7 +392,6 @@ export default function Customers() {
   const handleDeleteCustomer = async (customerId, customerName) => {
     if (window.confirm(`Are you sure you want to delete ${customerName}?`)) {
       try {
-        // Call API to delete customer
         const response = await fetch(`${BASE_URL}/api/deleteCustomer/${customerId}`, {
           headers:{
             "Authorization": `Bearer ${userToken}`
@@ -234,7 +406,6 @@ export default function Customers() {
         setCustomers(updatedCustomers);
         updateCustomers(updatedCustomers);
 
-        // Add activity
         addActivity({
           user: user.name,
           action: `Deleted customer ${customerName}`,
@@ -250,7 +421,7 @@ export default function Customers() {
         });
 
       } catch (error) {
-        // console.error('Error deleting customer:', error);
+        console.error('Error deleting customer:', error);
         addNotification({
           title: 'Deletion Failed',
           body: `Failed to delete ${customerName}`,
@@ -268,7 +439,6 @@ export default function Customers() {
   const getStatusColor = (status) => {
     switch (status) {
       case 'Active': return 'bg-green-100 text-green-800';
-      // case 'Pending': return 'bg-yellow-100 text-yellow-800';
       case 'Inactive': return 'bg-red-100 text-red-800';
       default: return 'bg-gray-100 text-gray-800';
     }
@@ -332,6 +502,9 @@ export default function Customers() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
                 </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Assign Returns
+                </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -352,8 +525,8 @@ export default function Customers() {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className="text-sm text-gray-900">{customer.returnsCount}</span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {can('action:customer.edit') ? (
+                  <td>
+                    {can("update") ? (
                       <select
                         value={customer.status}
                         onChange={(e) => handleStatusChange(customer.id, e.target.value, customer.name, customer.role)}
@@ -380,15 +553,17 @@ export default function Customers() {
                       >
                         <Eye className="w-4 h-4" />
                       </Link>
-                      {/* {can('action:customer.delete') && (
-                        <button 
-                          onClick={() => handleDeleteCustomer(customer.id, customer.name)}
-                          className="text-red-600 hover:text-red-700 transition-colors"
-                          title="Delete Customer"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      )} */}
+                    </div>
+                  </td>
+                  <td>
+                    <div className='text-center'>
+                      <button 
+                        onClick={() => handleAssignReturns(customer.id, customer.name)}
+                        className="px-3 py-1 rounded bg-blue-100 text-blue-600 hover:bg-blue-200 transition-colors text-sm font-medium"
+                        title="Assign Returns"
+                      >
+                        Assign
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -486,6 +661,151 @@ export default function Customers() {
             </button>
           </div>
         </form>
+      </Modal>
+
+      {/* Assign Returns Modal */}
+      <Modal
+        isOpen={showAssignModal}
+        onClose={() => {
+          setShowAssignModal(false);
+          setCustomerReturns([]);
+          setReturnsError('');
+        }}
+        title={`Assign Returns - ${currentCustomerName}`}
+        size="lg"
+      >
+        <div className="space-y-6">
+          {/* User Selection */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Select User
+            </label>
+            {isLoadingUsers ? (
+              <div className="flex items-center justify-center py-4">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+              </div>
+            ) : (
+              <select
+                value={selectedUserId}
+                onChange={(e) => setSelectedUserId(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="">Select a user</option>
+                {allUsers.map(user => (
+                  <option key={user.id} value={user.id}>
+                    {user.name} ({user.role}) - {user.email}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+
+          {/* Returns Selection */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-sm font-medium text-gray-700">
+                Select Returns to Assign
+              </label>
+              {customerReturns.length > 0 && (
+                <button
+                  type="button"
+                  onClick={handleSelectAllReturns}
+                  className="text-sm text-blue-600 hover:text-blue-700"
+                >
+                  {selectedReturnIds.length === customerReturns.length ? 'Deselect All' : 'Select All'}
+                </button>
+              )}
+            </div>
+            
+            {isLoadingReturns ? (
+              <div className="flex items-center justify-center py-4">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+              </div>
+            ) : returnsError ? (
+              <div className="text-center py-6 bg-gray-50 rounded-md">
+                <FileText className="mx-auto h-8 w-8 text-gray-400 mb-2" />
+                <p className="text-gray-500">{returnsError}</p>
+              </div>
+            ) : customerReturns.length === 0 ? (
+              <div className="text-center py-6 bg-gray-50 rounded-md">
+                <FileText className="mx-auto h-8 w-8 text-gray-400 mb-2" />
+                <p className="text-gray-500">No returns found for this customer</p>
+              </div>
+            ) : (
+              <div className="max-h-60 overflow-y-auto border border-gray-200 rounded-md">
+                {customerReturns.map(returnItem => (
+                  <div key={returnItem.id} className="flex items-center p-3 border-b border-gray-100 last:border-b-0 hover:bg-gray-50">
+                    <input
+                      type="checkbox"
+                      id={`return-${returnItem.id}`}
+                      checked={selectedReturnIds.includes(returnItem.id)}
+                      onChange={() => handleReturnSelection(returnItem.id)}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                    <label htmlFor={`return-${returnItem.id}`} className="ml-3 flex-1 cursor-pointer">
+                      <div className="flex justify-between items-center">
+                        <span className="font-medium">{returnItem.return_type}</span>
+                        <span className={`text-xs px-2 py-1 rounded-full ${
+                          returnItem.status === 'filed return' ? 'bg-green-100 text-green-800' :
+                          returnItem.status === 'in review' ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-blue-100 text-blue-800'
+                        }`}>
+                          {returnItem.status}
+                        </span>
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        Tax: {returnItem.tax_name} | Price: {returnItem.price ? `$${returnItem.price}` : 'Not set'}
+                      </div>
+                    </label>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Selected Count */}
+          {selectedReturnIds.length > 0 && (
+            <div className="bg-blue-50 p-3 rounded-md">
+              <p className="text-sm text-blue-700">
+                {selectedReturnIds.length} return{selectedReturnIds.length !== 1 ? 's' : ''} selected for assignment
+              </p>
+            </div>
+          )}
+
+          {/* Action Buttons */}
+          <div className="flex space-x-3 pt-4">
+            <button
+              type="button"
+              onClick={assignReturnsToUser}
+              disabled={isAssigning || !selectedUserId || selectedReturnIds.length === 0 || returnsError}
+              className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+            >
+              {isAssigning ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2"></div>
+                  Assigning...
+                </>
+              ) : (
+                <>
+                  <Check className="w-4 h-4 mr-2" />
+                  Assign Returns
+                </>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setShowAssignModal(false);
+                setCustomerReturns([]);
+                setReturnsError('');
+              }}
+              className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-400 transition-colors"
+            >
+              <X className="w-4 h-4 mr-2 inline" />
+              Cancel
+            </button>
+          </div>
+        </div>
       </Modal>
     </div>
   );

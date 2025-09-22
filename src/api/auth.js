@@ -65,32 +65,42 @@ export const authAPI = {
         },
         body: JSON.stringify({ email, otp }),
       });
-
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || 'OTP verification failed');
       }
 
       const data = await response.json();
-      // console.log(data)
+
+      console.log(data)
       localStorage.setItem("loginId", data.user.id.toString());
       localStorage.setItem("role", data.user.role.toString());
       localStorage.setItem("token", data.token.toString());
 
   
 
+      // document.cookie = `token=${data.token}; path=/; max-age=${60*60*24}; secure; samesite=strict`;
+
+      // 2️⃣ Store loginId & role in sessionStorage
+      // sessionStorage.setItem("loginId", data.user.id.toString());
+      // sessionStorage.setItem("role", data.user.role.toString());
+
+
 
       
 
-      let loginId = localStorage.getItem("loginId");
+      // let loginId = localStorage.getItem("loginId");
       
       // console.log(loginId)
       return {
         success: true,
         user: data.user,
         token: data.token,
-        message: data.message
+        message: data.message,
+        permissions: data.permissions // <-- add
+
       };
+      
     } catch (error) {
       throw new Error(error.message || 'OTP verification failed');
     }

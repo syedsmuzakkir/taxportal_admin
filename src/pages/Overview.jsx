@@ -9,9 +9,18 @@ export default function Overview() {
   const [invoices, setInvoices] = useState([]);
   const [activities, setActivities] = useState([]);
   const [loading, setLoading] = useState(true);
+// Add this at the top of Overview.jsx
+// function getCookie(name) {
+//   const value = `; ${document.cookie}`;
+//   const parts = value.split(`; ${name}=`);
+//   if (parts.length === 2) return parts.pop().split(';').shift();
+//   return null;
+// }
 
   const userToken = localStorage.getItem('token');
+// const userToken = getCookie("token");
 
+// console.log(userToken, 'this is usertoke')
   // Fetch dashboard data
   const fetchDashboardData = async () => {
     try {
@@ -19,6 +28,7 @@ export default function Overview() {
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${userToken}`,
+          //  credentials: "include",
         },
       });
       const data = await res.json();
@@ -74,6 +84,8 @@ export default function Overview() {
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${userToken}`,
+          //  credentials: "include",
+
         }
       });
       const data = await res.json();

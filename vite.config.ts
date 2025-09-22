@@ -8,6 +8,7 @@ export default defineConfig({
     exclude: ['lucide-react'],
   },
    server: {
+     historyApiFallback: true,
     proxy: {
       "/api": {
         target: "https://1379e77c1f3c.ngrok-free.app",
@@ -15,5 +16,6 @@ export default defineConfig({
         secure: false
       }
     }
-  }
+  },
+  
 });

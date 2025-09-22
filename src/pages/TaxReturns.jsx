@@ -205,7 +205,7 @@ export default function TaxReturns() {
                     </div>
                   </td>
 
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  {/* <td className="px-6 py-4 whitespace-nowrap">
                     <select
                       value={taxReturn.status}
                       onChange={(e) =>
@@ -222,7 +222,41 @@ export default function TaxReturns() {
                         </option>
                       ))}
                     </select>
-                  </td>
+                  </td> */}
+
+                  <td className="px-6 py-4 whitespace-nowrap">
+  {can("update") ? (
+    <select
+      value={taxReturn.status}
+      onChange={(e) =>
+        handleUpdateStatus(
+          taxReturn.id,
+          e.target.value,
+          taxReturn.role,
+          taxReturn.customer_id
+        )
+      }
+      className={`text-xs px-2 py-1 rounded-full border-0 ${
+        statusColors[taxReturn.status] || "bg-gray-100 text-gray-800"
+      }`}
+    >
+      {statuses.slice(1).map((status) => (
+        <option key={status} value={status}>
+          {status}
+        </option>
+      ))}
+    </select>
+  ) : (
+    <span
+      className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+        statusColors[taxReturn.status] || "bg-gray-100 text-gray-800"
+      }`}
+    >
+      {taxReturn.status}
+    </span>
+  )}
+</td>
+
 
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">

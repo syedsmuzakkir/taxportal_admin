@@ -5,62 +5,50 @@ import { useAuth } from './AuthContext.jsx';
 const PermissionsContext = createContext();
 
 export function PermissionsProvider({ children }) {
-  const { user } = useAuth();
-  const [permissions, setPermissions] = useState(permissionsManager.getAllPermissions());
+  const { user, permissions: authPermissions } = useAuth();
+  const [permissions, setPermissions] = useState(authPermissions || {});
 
   useEffect(() => {
-    const unsubscribe = permissionsManager.subscribe(() => {
-      setPermissions(permissionsManager.getAllPermissions());
-    });
+    if (authPermissions) {
+      setPermissions(authPermissions);
+    }
+  }, [authPermissions]);
 
-    return unsubscribe;
-  }, []);
+ const can = (permissionKey) => {
+  if (!user) return false;
 
-  const can = (permissionKey, context = {}) => {
-    if (!user) return false;
-    return permissionsManager.can(user.role, permissionKey, {
-      ...context,
-      userId: user.id,
-      ownerId: context.ownerId || context.userId
-    });
-  };
+  const role = user?.role;
 
-  const updatePermissions = (permissionKey, allowedRoles) => {
-    permissionsManager.updatePermission(permissionKey, allowedRoles);
-  };
+  // Optional: Keep super-admin bypass
+  if (role === "admin") return true;
 
-  const setRolePermissions = (role, permissionKeys) => {
-    permissionsManager.setRolePermissions(role, permissionKeys);
-  };
+  // ✅ From here only check dynamic flags
+  if (!permissions) return false;
 
-  const getRolePermissions = (role) => {
-    return permissionsManager.getRolePermissions(role);
-  };
+  if (["view", "update", "delete"].includes(permissionKey)) {
+    return !!permissions[permissionKey];
+  }
 
-  const resetToDefaults = () => {
-    permissionsManager.resetToDefaults();
-  };
+  if (permissions?.access_to?.includes(permissionKey)) {
+    return true;
+  }
 
-  const value = {
-    permissions,
-    can,
-    updatePermissions,
-    setRolePermissions,
-    getRolePermissions,
-    resetToDefaults
-  };
+  return false;
+};
+
 
   return (
-    <PermissionsContext.Provider value={value}>
+    <PermissionsContext.Provider value={{ permissions, can }}>
       {children}
     </PermissionsContext.Provider>
   );
 }
 
+
 export function usePermissions() {
   const context = useContext(PermissionsContext);
   if (!context) {
-    throw new Error('usePermissions must be used within a PermissionsProvider');
+    throw new Error("usePermissions must be used within a PermissionsProvider");
   }
   return context;
 }

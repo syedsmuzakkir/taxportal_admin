@@ -1,4 +1,3 @@
-"use client"
 
 import { useState, useRef, useEffect, useCallback } from "react"
 
@@ -361,6 +360,7 @@ export default function CustomerDetail() {
     status: returnItem.status || "In Progress",
     updatedAt: returnItem.modified_at || new Date().toISOString(),
     details: `Return type: ${returnItem.return_type}. Status: ${returnItem.status}`,
+    tax_name:returnItem.tax_name
   }))
 
   const downloadDocument = useCallback(async (doc) => {
@@ -451,6 +451,10 @@ export default function CustomerDetail() {
             <ArrowLeft className="h-5 w-5 text-gray-600" />
           </button>
         </div>
+        <div>
+          <h2>{returns[0]?.tax_name}</h2>
+        </div>
+       
       </header>
 
       <section className="space-y-3">
@@ -543,9 +547,9 @@ export default function CustomerDetail() {
                         <div className="border-t border-gray-200 p-4 md:p-5">
                           <div className="mb-2 text-sm font-medium text-gray-900">Documents ({documents.length})</div>
                           <div className="flex items-stretch gap-4 overflow-x-auto">
-                            {documents.map((d) => (
+                            {documents.map((d, index) => (
                               <div
-                                key={d.id}
+                                key={index}
                                 className="group relative flex h-16 w-24 shrink-0 cursor-pointer items-center justify-center rounded-md border border-gray-200 bg-gray-50 hover:bg-gray-100"
                                 title={d.doc_name}
                                 onClick={() => downloadDocument(d)}

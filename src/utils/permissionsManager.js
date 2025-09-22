@@ -140,7 +140,7 @@
 // PermissionsManager.js
 const defaultPermissions = {
   permissions: {
-    "page:overview": ["admin", "user", "client", "reviewer"],
+    "page:overview": ["admin", "user", "client", "reviewer", "employee"],
     "page:customers": ["admin", "user"],
     "page:users_management": ["admin"],
     "page:tax_returns": ["admin", "user", "reviewer"],

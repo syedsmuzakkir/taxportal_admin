@@ -1,142 +1,3 @@
-// import React, { createContext, useContext, useReducer, useEffect } from 'react';
-// import { authAPI } from '../api/auth.js';
-
-// const AuthContext = createContext();
-
-// const initialState = {
-//   user: null,
-//   isAuthenticated: false,
-//   requires2FA: false,
-//   twoFAValidated: false,
-//   isLoading: true,
-//   currentCode: null
-// };
-
-// function authReducer(state, action) {
-//   switch (action.type) {
-//     case 'SET_LOADING':
-//       return { ...state, isLoading: action.payload };
-//     case 'LOGIN_SUCCESS':
-//       return { 
-//         ...state, 
-//         user: action.payload, 
-//         isAuthenticated: true, 
-//         requires2FA: true,
-//         twoFAValidated: false,
-//         isLoading: false 
-//       };
-//     case 'SET_2FA_CODE':
-//       return { ...state, currentCode: action.payload };
-//     case '2FA_SUCCESS':
-//       return { 
-//         ...state, 
-//         twoFAValidated: true, 
-//         requires2FA: false,
-//         currentCode: null
-//       };
-//     case 'LOGOUT':
-//       return { 
-//         ...initialState, 
-//         isLoading: false 
-//       };
-//     case 'RESTORE_SESSION':
-//       return { 
-//         ...state, 
-//         user: action.payload, 
-//         isAuthenticated: true, 
-//         twoFAValidated: true,
-//         requires2FA: false,
-//         isLoading: false 
-//       };
-//     default:
-//       return state;
-//   }
-// }
-
-// export function AuthProvider({ children }) {
-//   const [state, dispatch] = useReducer(authReducer, initialState);
-
-//   useEffect(() => {
-//     // Check for existing session
-//     const session = localStorage.getItem('userSession');
-//     if (session) {
-//       try {
-//         const userData = JSON.parse(session);
-//         dispatch({ type: 'RESTORE_SESSION', payload: userData });
-//       } catch (error) {
-//         console.error('Error restoring session:', error);
-//         localStorage.removeItem('userSession');
-//         dispatch({ type: 'SET_LOADING', payload: false });
-//       }
-//     } else {
-//       dispatch({ type: 'SET_LOADING', payload: false });
-//     }
-//   }, []);
-
-//   const login = async (email, password) => {
-//     try {
-//       const user = await authAPI.login(email, password);
-      
-//       // Generate 2FA code
-//       const code = Math.floor(100000 + Math.random() * 900000).toString();
-//       dispatch({ type: 'SET_2FA_CODE', payload: code });
-      
-//       // Simulate sending code
-//       console.log(`2FA Code for ${email}: ${code}`);
-      
-//       dispatch({ type: 'LOGIN_SUCCESS', payload: user });
-//       return { success: true, user };
-//     } catch (error) {
-//       return { success: false, error: error.message };
-//     }
-//   };
-
-//   const verify2FA = async (code) => {
-//     if (code === state.currentCode) {
-//       // Save session
-//       localStorage.setItem('userSession', JSON.stringify(state.user));
-//       dispatch({ type: '2FA_SUCCESS' });
-//       return { success: true };
-//     } else {
-//       return { success: false, error: 'Invalid verification code' };
-//     }
-//   };
-
-//   const resend2FA = () => {
-//     const newCode = Math.floor(100000 + Math.random() * 900000).toString();
-//     dispatch({ type: 'SET_2FA_CODE', payload: newCode });
-//     console.log(`New 2FA Code: ${newCode}`);
-//     return newCode;
-//   };
-
-//   const logout = () => {
-//     localStorage.removeItem('userSession');
-//     dispatch({ type: 'LOGOUT' });
-//   };
-
-//   const value = {
-//     ...state,
-//     login,
-//     logout,
-//     verify2FA,
-//     resend2FA
-//   };
-
-//   return (
-//     <AuthContext.Provider value={value}>
-//       {children}
-//     </AuthContext.Provider>
-//   );
-// }
-
-// export function useAuth() {
-//   const context = useContext(AuthContext);
-//   if (!context) {
-//     throw new Error('useAuth must be used within an AuthProvider');
-//   }
-//   return context;
-// }
-
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import { authAPI } from '../api/auth.js';
 
@@ -148,9 +9,10 @@ const initialState = {
   isAuthenticated: false,
   requiresOTP: false,
   otpValidated: false,
-  isLoading: true,
+  isLoading: true,   // stays true until restore completes
   loginEmail: null,
-  loginPassword: null // Add password storage
+  loginPassword: null,
+  permissions: {},   // default empty object instead of null
 };
 
 function authReducer(state, action) {
@@ -162,7 +24,7 @@ function authReducer(state, action) {
         ...state, 
         requiresOTP: true,
         loginEmail: action.payload.email,
-        loginPassword: action.payload.password, // Store password
+        loginPassword: action.payload.password,
         isLoading: false 
       };
     case 'OTP_SUCCESS':
@@ -173,8 +35,9 @@ function authReducer(state, action) {
         isAuthenticated: true,
         otpValidated: true,
         requiresOTP: false,
-        loginPassword: null, // Clear password after success
-        isLoading: false 
+        loginPassword: null,
+        isLoading: false,
+        permissions: action.payload.permissions || {}, 
       };
     case 'LOGOUT':
       return { 
@@ -189,7 +52,8 @@ function authReducer(state, action) {
         isAuthenticated: true, 
         otpValidated: true,
         requiresOTP: false,
-        isLoading: false 
+        isLoading: false,
+        permissions: action.payload.permissions || {}, 
       };
     default:
       return state;
@@ -200,11 +64,12 @@ export function AuthProvider({ children }) {
   const [state, dispatch] = useReducer(authReducer, initialState);
 
   useEffect(() => {
-    // Check for existing session
+    // Restore session from localStorage
     const session = localStorage.getItem('userSession');
     if (session) {
       try {
         const sessionData = JSON.parse(session);
+        console.log("Restoring session:", sessionData); // debug
         dispatch({ type: 'RESTORE_SESSION', payload: sessionData });
       } catch (error) {
         console.error('Error restoring session:', error);
@@ -220,7 +85,6 @@ export function AuthProvider({ children }) {
     try {
       dispatch({ type: 'SET_LOADING', payload: true });
       const result = await authAPI.login(email, password);
-      
       if (result.success) {
         dispatch({ type: 'LOGIN_SUCCESS', payload: { email, password } });
         return { success: true, message: result.message };
@@ -235,15 +99,13 @@ export function AuthProvider({ children }) {
     try {
       dispatch({ type: 'SET_LOADING', payload: true });
       const result = await authAPI.verifyOTP(state.loginEmail, otp);
-      
       if (result.success) {
-        // Save session
         const sessionData = {
           user: result.user,
-          token: result.token
+          token: result.token,
+          permissions: result.permissions || {},
         };
         localStorage.setItem('userSession', JSON.stringify(sessionData));
-        
         dispatch({ type: 'OTP_SUCCESS', payload: sessionData });
         return { success: true, message: result.message };
       }
@@ -258,7 +120,6 @@ export function AuthProvider({ children }) {
       if (!state.loginEmail || !state.loginPassword) {
         throw new Error('No login credentials available');
       }
-      
       const result = await authAPI.login(state.loginEmail, state.loginPassword);
       return { success: true, message: result.message };
     } catch (error) {
@@ -276,8 +137,17 @@ export function AuthProvider({ children }) {
     login,
     logout,
     verifyOTP,
-    resendOTP
+    resendOTP,
   };
+
+  // 🔒 Don’t render children until restore is complete
+  if (state.isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   return (
     <AuthContext.Provider value={value}>

@@ -1,7 +1,239 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect } from "react"; 
 import { Plus, X, Search } from "lucide-react";
 import { BASE_URL } from "../api/BaseUrl";
 import { useNotifications } from "../contexts/NotificationsContext.jsx";
+import { pdf, Document, Page, Text, View, StyleSheet, Font, Image } from '@react-pdf/renderer';
+import { saveAs } from 'file-saver';
+import * as numberToWords from 'number-to-words';
+import invertio from '../images/invertio.jpeg'
+// PDF Styles
+const styles = StyleSheet.create({
+  page: {
+    flexDirection: 'column',
+    backgroundColor: '#FFFFFF',
+    padding: 15,
+    fontFamily: 'Helvetica'
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+    borderBottom: '2 solid #e5e7eb',
+    paddingBottom: 8
+  },
+  companyInfo: {
+    flex: 1
+  },
+  invoiceInfo: {
+    textAlign: 'right'
+  },
+  title: {
+    fontSize: 16,
+    fontWeight: 700,
+    color: '#1f2937',
+    marginBottom: 8
+  },
+  subtitle: {
+    fontSize: 10,
+    color: '#6b7280',
+    marginBottom: 5
+  },
+  text: {
+    fontSize: 10,
+    color: '#374151',
+    marginBottom: 3
+  },
+  bold: {
+    fontWeight: 400
+  },
+  section: {
+    marginBottom: 8
+  },
+  table: {
+    width: '100%',
+    marginTop: 8,
+    marginBottom: 8
+  },
+  tableRow: {
+    flexDirection: 'row',
+    borderBottom: '1 solid #e5e7eb'
+  },
+  tableHeader: {
+    backgroundColor: '#f8f9fa',
+    fontWeight: 350
+  },
+  tableCell: {
+    padding: 8,
+    flex: 1,
+    fontSize: 9
+  },
+  tableCellRight: {
+    padding: 8,
+    flex: 1,
+    textAlign: 'right',
+    fontSize: 9
+  },
+  totalRow: {
+    backgroundColor: '#e3f2fd',
+    fontWeight: 200
+  },
+  bankDetails: {
+    backgroundColor: '#f8f9fa',
+    padding: 15,
+    borderRadius: 5,
+    marginTop: 8,
+    marginBottom: 8
+  },
+  notes: {
+    marginTop: 8,
+    padding: 10,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 5,
+    borderLeft: '4 solid #3b82f6'
+  },
+  circleContainer: {
+    width: 60, 
+    height: 60, 
+    borderRadius: 30, 
+    backgroundColor: 'white', 
+    borderWidth: 1, 
+    borderColor: '#e5e7eb',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 15
+  },
+  redText: {
+    color: 'red',
+    fontSize: 12,
+    fontWeight: 'bold'
+  },
+  greyText: {
+    color: 'grey',
+    fontSize: 12,
+    fontWeight: 'bold'
+  }
+});
+
+// Format date function
+const formatDate = (dateString) => {
+  const date = new Date(dateString);
+  return date.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric'
+  });
+};
+
+// Create Invoice Document component
+const InvoiceDocument = ({ invoice }) => (
+  <Document>
+    <Page size="A4" style={styles.page}>
+      <View style={styles.header}>
+        <View style={styles.companyInfo}>
+          <Image 
+            src={invertio} 
+            style={{ width: 80, height: 80, marginBottom: 10 }}
+          />
+          <Text style={styles.title}>Invertio Solutions</Text>
+          <Text style={styles.text}>5 Penn Plaza, 14th Floor, New York, NY 10001, US</Text>
+          <Text style={styles.text}>GSTIN: 36AAHCJ2304M1ZK</Text>
+        </View>
+        <View style={styles.invoiceInfo}>
+          <Text style={styles.title}>TAX INVOICE</Text>
+          <Text style={styles.text}><Text style={styles.bold}>Invoice #:</Text> {invoice.id}</Text>
+          <Text style={styles.text}><Text style={styles.bold}>Invoice Date:</Text> {formatDate(invoice.createdAt)}</Text>
+          <Text style={styles.text}><Text style={styles.bold}>Due Date:</Text> {formatDate(invoice.due_date)}</Text>
+        </View>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.subtitle}>Bill to:</Text>
+        <Text style={[styles.text, styles.bold]}>{invoice.customerName}</Text>
+        <Text style={styles.text}>Customer ID: {invoice.customerId}</Text>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.subtitle}>Service Details:</Text>
+        <View style={styles.table}>
+          {/* Table Header */}
+          <View style={[styles.tableRow, styles.tableHeader]}>
+            <Text style={styles.tableCell}>Description</Text>
+            <Text style={styles.tableCell}>Return Type</Text>
+            <Text style={styles.tableCellRight}>Amount (USD)</Text>
+          </View>
+          
+          {/* Table Row */}
+          <View style={styles.tableRow}>
+            <Text style={styles.tableCell}>{invoice.returnType}</Text>
+            <Text style={styles.tableCell}>{invoice.returnName}</Text>
+            {/* <Text style={styles.tableCellRight}>${invoice.invoiceAmount.toFixed(2)}</Text> */}
+          </View>
+          
+          {/* Table Row */}
+          <View style={styles.tableRow}>
+            <Text style={styles.tableCell}>{invoice.returnName}</Text>
+            <Text style={styles.tableCell}>{invoice.returnType}</Text>
+            {/* <Text style={styles.tableCellRight}>${invoice.invoiceAmount.toFixed(2)}</Text> */}
+          </View>
+          
+          {/* Subtotal Row */}
+          <View style={styles.tableRow}>
+            <Text style={[styles.tableCell]}></Text>
+            <Text style={[styles.tableCell, {textAlign: 'right', fontSize: 9}]}>Subtotal</Text>
+            {/* <Text style={[styles.tableCellRight, {fontSize: 9}]}>${invoice.invoiceAmount.toFixed(2)}</Text> */}
+          </View>
+          
+          {/* Payment Platform Fee Row */}
+          <View style={styles.tableRow}>
+            <Text style={[styles.tableCell]}></Text>
+            <Text style={[styles.tableCell, {textAlign: 'right', fontSize: 9}]}>Payment Platform Fee</Text>
+            <Text style={[styles.tableCellRight, {fontSize: 9}]}>$19.00</Text>
+          </View>
+          
+          {/* Total Row */}
+          <View style={[styles.tableRow, styles.totalRow]}>
+            <Text style={[styles.tableCell, styles.bold]}></Text>
+            <Text style={[styles.tableCell, styles.bold, {textAlign: 'right', fontSize: 9}]}>Total</Text>
+            {/* <Text style={[styles.tableCellRight, styles.bold, {fontSize: 9}]}>${(invoice.invoiceAmount + 19).toFixed(2)}</Text> */}
+          </View>
+          
+          {/* Total in Words Row */}
+          <View style={[styles.tableRow, styles.totalRow]}>
+            <Text style={[styles.tableCell, styles.bold, {textAlign: 'center', fontSize: 9}]} colSpan={3}>
+              Total in words: {numberToWords.toWords(invoice.invoiceAmount + 19).replace(/\b\w/g, l => l.toUpperCase())} Dollars Only
+            </Text>
+          </View>
+        </View>
+      </View>
+
+      <View style={styles.bankDetails}>
+        <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 10 }}>
+          <View style={styles.circleContainer}>
+            <Text>
+              <Text style={styles.redText}>CF</Text>
+              <Text style={styles.greyText}>SB</Text>
+            </Text>
+          </View>
+          
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.subtitle, styles.bold]}>Bank Details:</Text>
+            <Text style={styles.text}><Text style={styles.bold}>Bank Name:</Text> Community Federal Savings Bank</Text>
+            <Text style={styles.text}><Text style={styles.bold}>Account Holder:</Text> INVERTIO SOLUTIONS PRIVATE LIMITED</Text>
+            <Text style={styles.text}><Text style={styles.bold}>Account Number:</Text> 8331054346</Text>
+            <Text style={styles.text}><Text style={styles.bold}>ACH Routing Number:</Text> 026073150</Text>
+            <Text style={styles.text}><Text style={styles.bold}>Fedwire Routing Number:</Text> 026073008</Text>
+            <Text style={styles.text}><Text style={styles.bold}>Address:</Text> 5 Penn Plaza, 14th Floor, New York, NY 10001, US</Text>
+          </View>
+        </View>
+      </View>
+
+      <View style={styles.notes}>
+        <Text style={[styles.text, styles.bold]}>Notes:</Text>
+        <Text style={styles.text}>Thank you for your continued trust in our services.</Text>
+      </View>
+    </Page>
+  </Document>
+);
 
 export default function Invoices() {
   const { addNotification } = useNotifications();
@@ -18,8 +250,10 @@ export default function Invoices() {
     taxReturns: false,
     createInvoice: false,
   });
+  const [viewInvoice, setViewInvoice] = useState(null);
+  const [isDownloading, setIsDownloading] = useState(false);
 
-  const filteredInvoices = invoices.filter((inv) => {
+  const filteredInvoices = invoices?.filter((inv) => {
     const q = searchQuery.toLowerCase();
     return (
       inv.id.toString().includes(q) ||
@@ -50,8 +284,6 @@ export default function Invoices() {
     return_id: "",
     line_items: [{ description: "", hours: 0, rate: 0, amount: 0 }],
     no_of_hours: 0,
-
-    // updated_by_id: localStorage.getItem("createdby_id") || "",
     status: "pending",
     due_date: "",
     createdby_type: role || "",
@@ -78,12 +310,11 @@ export default function Invoices() {
       const data = await response.json();
       setCustomers(data.users);
     } catch (error) {
-      // console.error("Error loading customers:", error);
       addNotification({
-  title: "Status",
-  body: `${error}`,
-  level: "error",
-});
+        title: "Status",
+        body: `${error}`,
+        level: "error",
+      });
     } finally {
       setLoadingState("customers", false);
     }
@@ -149,7 +380,6 @@ export default function Invoices() {
   };
 
   const removeLineItem = (index) => {
-    // if (invoiceData.line_items.length <= 1) return;
     setInvoiceData((prev) => ({
       ...prev,
       line_items: prev.line_items.filter((_, i) => i !== index),
@@ -169,13 +399,6 @@ export default function Invoices() {
     setInvoiceData((prev) => ({
       ...prev,
       line_items: updatedLineItems,
-      // no_of_hours:
-      //   invoiceType === "hourly"
-      //     ? updatedLineItems.reduce(
-      //         (sum, item) => sum + (Number(item.hours) || 0),
-      //         0
-      //       )
-      //     : 0,
     }));
   };
 
@@ -200,49 +423,72 @@ export default function Invoices() {
       ...prev,
       return_id: returnItem.id,
       line_items: [],
-      // returnItem.pricing_type === "hourly"
-      //   ? [
-      //       {
-      //         description: `Tax preparation for ${returnItem.return_type}`,
-      //         hours: 1,
-      //         rate: returnItem.price || 0,
-      //         amount: returnItem.price || 0,
-      //       },
-      //     ]
-      //   : [
-      //       {
-      //         description: `Tax preparation for ${returnItem.return_type}`,
-      //         amount: returnItem.price || 0,
-      //       },
-      //     ],
     }));
   };
 
   // const handleCreateInvoice = async (e) => {
   //   e.preventDefault();
   //   try {
-  //     setLoadingState('createInvoice', true);
-  //     const response = await fetch(
-  //       `${BASE_URL}/api/create-invoice`,
-  //       {
-  //         method: "POST",
-  //         headers: { "Content-Type": "application/json" ,"Authorization": `Bearer ${userToken}`},
-  //         body: JSON.stringify(invoiceData),
+  //     setLoadingState("createInvoice", true);
 
-  //       }
-  //     );
+  //     let payload;
+  //     if (invoiceType === "hourly") {
+  //       payload = {
+  //         customer_id: invoiceData.customer_id,
+  //         return_id: invoiceData.return_id,
+  //         line_items: invoiceData.line_items.map((item) => ({
+  //           description: item.description,
+  //           hours: Number(item.hours) || 0,
+  //           rate: Number(item.rate) || 0,
+  //           amount: Number(item.amount) || 0,
+  //         })),
+  //         no_of_hours: invoiceData.no_of_hours,
+  //         updated_by_id: loginId,
+  //         status: invoiceData.status,
+  //         due_date: invoiceData.due_date,
+  //         createdby_type: role,
+  //         createdby_id: loginId,
+  //       };
+  //     } else if (invoiceType === "lumpsum") {
+  //       payload = {
+  //         customer_id: invoiceData.customer_id,
+  //         return_id: invoiceData.return_id,
+  //         line_items: invoiceData.line_items.map((item) => ({
+  //           description: item.description,
+  //           amount: Number(item.amount) || 0,
+  //         })),
+  //         updated_by_id: loginId,
+  //         status: invoiceData.status,
+  //         due_date: invoiceData.due_date,
+  //         createdby_type: role,
+  //         createdby_id: loginId,
+  //       };
+  //     }
 
+  //     const response = await fetch(`${BASE_URL}/api/create-invoice`, {
+  //       method: "POST",
+  //       headers: {
+  //         "Content-Type": "application/json",
+  //         Authorization: `Bearer ${userToken}`,
+  //       },
+  //       body: JSON.stringify(payload),
+  //     });
+
+  //     const data = await response.json()
   //     if (response.ok) {
-  //       alert("Invoice created successfully!");
+  //       addNotification({
+  //         title: "Status",
+  //         body: `${response?.message || 'Invoice created successfully'}`,
+  //         level: "success",
+  //       });
   //       setShowCreateModal(false);
   //       setSelectedCustomer(null);
   //       setSelectedReturn(null);
   //       setInvoiceData({
   //         customer_id: "",
   //         return_id: "",
-  //         line_items: [{ description: "", hours: 1, rate: 0, amount: 0 }],
+  //         line_items: [],
   //         no_of_hours: 0,
-  //         updated_by_id: localStorage.getItem("createdby_id") || "",
   //         status: "pending",
   //         due_date: "",
   //         createdby_type: role || "",
@@ -250,114 +496,147 @@ export default function Invoices() {
   //       });
   //       loadInvoices();
   //     } else {
-  //       alert("Failed to create invoice");
+  //       addNotification({
+  //         title: "Status",
+  //         body: `${data?.error || 'Price not set, please set the price first'}`,
+  //         level: "error",
+  //       });
   //     }
   //   } catch (error) {
-  //     console.error("Error creating invoice:", error);
-  //     alert("Error creating invoice");
+  //     addNotification({
+  //       title: "Status",
+  //       body: "Error creating invoice",
+  //       level: "error",
+  //     });
   //   } finally {
-  //     setLoadingState('createInvoice', false);
+  //     setLoadingState("createInvoice", false);
   //   }
   // };
 
+
   const handleCreateInvoice = async (e) => {
-    e.preventDefault();
-    try {
-      setLoadingState("createInvoice", true);
+  e.preventDefault();
+  try {
+    setLoadingState("createInvoice", true);
 
-      let payload;
-      if (invoiceType === "hourly") {
-        payload = {
-          customer_id: invoiceData.customer_id,
-          return_id: invoiceData.return_id,
-          line_items: invoiceData.line_items.map((item) => ({
-            description: item.description,
-            hours: Number(item.hours) || 0,
-            rate: Number(item.rate) || 0,
-            amount: Number(item.amount) || 0,
-          })),
-          no_of_hours: invoiceData.no_of_hours,
-          updated_by_id: loginId,
-          status: invoiceData.status,
-          due_date: invoiceData.due_date,
-          createdby_type: role,
-          createdby_id: loginId,
-        };
-      } else if (invoiceType === "lumpsum") {
-        payload = {
-          customer_id: invoiceData.customer_id,
-          return_id: invoiceData.return_id,
-          line_items: invoiceData.line_items.map((item) => ({
-            description: item.description,
-            amount: Number(item.amount) || 0,
-          })),
-          updated_by_id: loginId,
-          status: invoiceData.status,
-          due_date: invoiceData.due_date,
-          createdby_type: role,
-          createdby_id: loginId,
-        };
+    let payload = {
+      customer_id: invoiceData.customer_id,
+      return_id: invoiceData.return_id,
+      line_items: [],
+      updated_by_id: loginId,
+      status: invoiceData.status,
+      due_date: invoiceData.due_date,
+      createdby_type: role,
+      createdby_id: loginId,
+    };
+
+    if (invoiceType === "hourly") {
+      payload.line_items = invoiceData.line_items.map((item) => ({
+        description: item.description,
+        hours: Number(item.hours) || 0,
+        rate: Number(item.rate) || 0,
+        amount: Number(item.amount) || 0,
+      }));
+      payload.no_of_hours = invoiceData.no_of_hours;
+    } else if (invoiceType === "lumpsum") {
+      payload.line_items = invoiceData.line_items.map((item) => ({
+        description: item.description,
+        amount: Number(item.amount) || 0,
+      }));
+    } else {
+      // ✅ Fallback: send all fields generically
+      payload.line_items = invoiceData.line_items.map((item) => ({
+        description: item.description,
+        hours: Number(item.hours) || 0,
+        rate: Number(item.rate) || 0,
+        amount: Number(item.amount) || 0,
+      }));
+      if (invoiceData.no_of_hours) {
+        payload.no_of_hours = invoiceData.no_of_hours;
       }
-
-      const response = await fetch(`${BASE_URL}/api/create-invoice`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${userToken}`,
-        },
-        body: JSON.stringify(payload),
-      });
-
-      const data = await response.json()
-      console.log(data.error)
-      if (response.ok) {
-        // alert("Invoice created successfully!");
-         addNotification({
-  title: "Status",
-  body: `${response?.message|| 'invoice created successfully'}`,
-  level: "success",
-});
-        setShowCreateModal(false);
-        setSelectedCustomer(null);
-        setSelectedReturn(null);
-        setInvoiceData({
-          customer_id: "",
-          return_id: "",
-          line_items: [],
-          no_of_hours: 0,
-          status: "pending",
-          due_date: "",
-          createdby_type: role || "",
-          createdby_id: loginId || "",
-        });
-        loadInvoices();
-      } else {
-        // alert("Failed to create invoice");
-        // console.log(error)
-          addNotification({
-  title: "Status",
-  body: `${response?.error|| 'price not set, please set the price first'}`,
-  level: "error",
-});
-      }
-    } catch (error) {
-      // console.error("Error creating invoice:", error);
-      // alert("Error creating invoice");
-      addNotification({
-  title: "Status",
-  body: `${response?.error|| 'price not set, please set the price first'}`,
-  level: "error",
-});
-    } finally {
-      setLoadingState("createInvoice", false);
     }
-  };
+
+    const response = await fetch(`${BASE_URL}/api/create-invoice`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${userToken}`,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await response.json();
+    if (response.ok) {
+      addNotification({
+        title: "Status",
+        body: `${data?.message || "Invoice created successfully"}`,
+        level: "success",
+      });
+      setShowCreateModal(false);
+      setSelectedCustomer(null);
+      setSelectedReturn(null);
+      setInvoiceData({
+        customer_id: "",
+        return_id: "",
+        line_items: [],
+        no_of_hours: 0,
+        status: "pending",
+        due_date: "",
+        createdby_type: role || "",
+        createdby_id: loginId || "",
+      });
+      loadInvoices();
+    } else {
+      addNotification({
+        title: "Status",
+        body: `${data?.error || "Price not set, please set the price first"}`,
+        level: "error",
+      });
+    }
+  } catch (error) {
+    addNotification({
+      title: "Status",
+      body: "Error creating invoice",
+      level: "error",
+    });
+  } finally {
+    setLoadingState("createInvoice", false);
+  }
+};
 
   const formatCurrency = (amount) =>
     new Intl.NumberFormat("en-US", {
       style: "currency",
       currency: "USD",
     }).format(amount);
+
+  const handleDownloadInvoice = async (invoice) => {
+    setIsDownloading(true);
+    try {
+      // Prepare invoice data for PDF
+      const pdfInvoice = {
+        id: invoice.id,
+        createdAt: invoice.created_at,
+        dueDate: invoice.due_date,
+        customerName: invoice.customer_name,
+        customerId: invoice.customer_id,
+        returnType: invoice.return_type,
+        returnName: invoice.return_name,
+        invoiceAmount: invoice.invoice_amount
+      };
+      
+      const blob = await pdf(<InvoiceDocument invoice={pdfInvoice} />).toBlob();
+      saveAs(blob, `invoice-${invoice.id}.pdf`);
+    } catch (error) {
+      addNotification({
+        title: "Error",
+        body: "Failed to generate PDF",
+        level: "error",
+      });
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   if (isLoading && !showCreateModal) {
     return (
@@ -437,6 +716,9 @@ export default function Invoices() {
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
                   Created By
                 </th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -475,12 +757,26 @@ export default function Invoices() {
                     <td className="px-4 py-3 text-gray-700">
                       {inv.createdby_type} #{inv.createdby_id}
                     </td>
+                    <td className="px-4 py-3 text-gray-700">
+                      <button
+                        onClick={() => setViewInvoice(inv)}
+                        className="text-blue-600 hover:text-blue-800 mr-2"
+                      >
+                        View
+                      </button>
+                      <button
+                        onClick={() => handleDownloadInvoice(inv)}
+                        className="text-green-600 hover:text-green-800"
+                      >
+                        Download
+                      </button>
+                    </td>
                   </tr>
                 ))
               ) : (
                 <tr>
                   <td
-                    colSpan={7}
+                    colSpan={8}
                     className="text-center text-gray-500 py-6 text-sm"
                   >
                     No invoices found.
@@ -491,6 +787,124 @@ export default function Invoices() {
           </table>
         )}
       </div>
+
+      {/* View Invoice Modal */}
+      {viewInvoice && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex flex-col items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-lg max-w-4xl w-full max-h-[95vh] overflow-y-auto relative">
+            <button 
+              onClick={() => setViewInvoice(null)}
+              className="absolute top-4 right-4 p-2 hover:bg-gray-100 rounded-full transition-colors z-10"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+              </svg>
+            </button>
+            
+            {/* Header */}
+            <div className="flex justify-between items-center p-6 border-b border-gray-200">
+              <div>
+                <img src={invertio} alt="full-logo" className="w-20 h-20" />
+                <h3 className="font-bold text-gray-900 mb-2">Invertio Solutions</h3>
+                <p className="text-sm text-gray-700">5 Penn Plaza, 14th Floor, New York, NY 10001, US</p>
+                <p className="text-sm text-gray-700 mt-1">GSTIN: 36AAHCJ2304M1ZK</p>
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-black">TAX INVOICE</h1>
+                <div className="mt-2 text-sm text-black">
+                  <p><span className="font-medium">Invoice #:</span> {viewInvoice.id}</p>
+                  <p><span className="font-medium">Invoice Date:</span> {formatDate(viewInvoice.created_at)}</p>
+                  <p><span className="font-medium">Due Date:</span> {formatDate(viewInvoice.due_date)}</p>
+                  <p><span className="font-medium">Payment terms:</span> Immediate</p>
+                  <p><span className="font-medium">Accepted Methods:</span> ACH & Fedwire</p>
+                </div>
+              </div>
+            </div>
+            
+            {/* Body */}
+            <div className="p-6">
+              {/* Company and Bill To Section */}
+              <div className="grid md:grid-cols-2 gap-8 mb-8">
+                <div>
+                  <h3 className="font-bold text-gray-400 mb-2">Bill to:</h3>
+                  <p className="text-sm text-black font-bold">{viewInvoice.customer_name}</p>
+                  <p className="text-sm text-gray-700">Customer ID: {viewInvoice.customer_id}</p>
+                </div>
+              </div>
+              
+              {/* Items Table */}
+              <div className="bg-white rounded-lg overflow-hidden mb-6 shadow-md">
+                <table className="w-full">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="py-3 px-4 text-left text-sm font-bold text-black border-b border-gray-200">Description</th>
+                      <th className="py-3 px-4 text-left text-sm font-bold text-black border-b border-gray-200">Return Type</th>
+                      <th className="py-3 px-4 text-right text-sm font-bold text-black border-b border-gray-200">Amount (USD)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td className="py-3 px-4 text-sm text-gray-700 border-b border-gray-200">{viewInvoice.return_name || 'Tax Preparation Service'}</td>
+                      <td className="py-3 px-4 text-sm text-gray-700 border-b border-gray-200">{viewInvoice.return_type || 'N/A'}</td>
+                      <td className="py-3 px-4 text-sm text-gray-700 text-right border-b border-gray-200">${typeof viewInvoice.invoice_amount === 'number' ? viewInvoice.invoice_amount.toFixed(2) : 'N/A'}</td>
+                    </tr>
+                    
+                    {/* Total row */}
+                    <tr className="bg-blue-100">
+                      <td className="py-4 px-4 text-lg font-bold text-gray-900" colSpan={2}>Total (USD)</td>
+                      <td className="py-4 px-4 text-lg font-bold text-gray-900 text-right">$${typeof viewInvoice.invoice_amount === 'number' ? viewInvoice.invoice_amount.toFixed(2) : 'N/A'}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              
+              {/* Bank Details */}
+              <h3 className="font-bold text-gray-400 mb-3">Bank details:</h3>
+              
+              <div className="bg-gray-100 border border-gray-200 text-black rounded-lg p-4 mb-6 flex gap-3">
+                <div className="rounded-full w-20 h-16 flex justify-center items-center border border-gray-200 bg-white">
+                  <p className="text-gray-700 font-bold"> <span className="text-red-700 font-bold">CF</span>SB</p>
+                </div>
+                <div className="grid md:grid-cols-2 gap-4 text-sm text-gray-700">
+                  <div>
+                    <p><span className="font-medium text-black">Payment method:</span> ACH or Fedwire</p>
+                    <p><span className="font-medium text-black">Account number:</span> 8331054346</p>
+                    <p><span className="font-medium text-black">ACH routing number:</span> 026073150</p>
+                    <p><span className="font-medium text-black">Fedwire routing number:</span> 026073008</p>
+                    <p><span className="font-medium text-black">Account type:</span> Business checking account</p>
+                    <p><span className="font-medium text-black">Bank name:</span> Community Federal Savings Bank</p>
+                    <p><span className="font-medium text-black">Beneficiary address:</span> 5 Penn Plaza, 14th Floor, New York, NY 10001, US</p>
+                    <p><span className="font-medium text-black">Account holder name:</span> INVERTIO SOLUTIONS PRIVATE LIMITED</p>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Notes */}
+              <div className="text-sm text-gray-700">
+                <p className="font-medium">Notes</p>
+                <p>Thank you for your continued trust in our services.</p>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex justify-end space-x-4 mt-6">
+                <button
+                  onClick={() => handleDownloadInvoice(viewInvoice)}
+                  className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
+                  disabled={isDownloading}
+                >
+                  {isDownloading ? 'Generating PDF...' : 'Download PDF'}
+                </button>
+                <button
+                  onClick={() => setViewInvoice(null)}
+                  className="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600 transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Create Invoice Modal */}
       {showCreateModal && (
@@ -658,8 +1072,6 @@ export default function Invoices() {
                       }
                     >
                       <option required value="pending">Pending</option>
-                      {/* <option value="paid">Paid</option> */}
-                      {/* <option value="overdue">Overdue</option> */}
                     </select>
                     <input
                     required
@@ -674,8 +1086,8 @@ export default function Invoices() {
                       }
                     />
                   </div>
-                  {/* Line Items */}
                   
+                  {/* Line Items */}
                   <div>
                     <div className="flex justify-between items-center mb-2">
                       <span className="font-medium">Line Items</span>
@@ -763,9 +1175,6 @@ export default function Invoices() {
                       </div>
                     ))}
                   </div>
-
-                  {/* Status + Due Date */}
-                  
 
                   {/* Total */}
                   <div className="text-right font-semibold">
