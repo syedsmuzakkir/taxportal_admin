@@ -169,6 +169,9 @@ export default function TaxReturns() {
                   Customer
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Assign To
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Status
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -223,6 +226,10 @@ export default function TaxReturns() {
                       ))}
                     </select>
                   </td> */}
+                  <td>
+
+                    {taxReturn.assigned_to}
+                  </td>
 
                   <td className="px-6 py-4 whitespace-nowrap">
   {can("update") ? (
