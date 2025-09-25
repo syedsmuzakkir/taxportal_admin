@@ -11,6 +11,10 @@
   },
   "dependencies": {
     "@react-pdf/renderer": "^4.3.0",
+    "@tanstack/query-sync-storage-persister": "^5.90.2",
+    "@tanstack/react-query": "^5.90.2",
+    "@tanstack/react-query-devtools": "^5.90.2",
+    "@tanstack/react-query-persist-client": "^5.90.2",
     "file-saver": "^2.0.5",
     "lucide-react": "^0.344.0",
     "number-to-words": "^1.2.4",
